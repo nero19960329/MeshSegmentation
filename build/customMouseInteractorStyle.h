@@ -100,10 +100,10 @@ public:
             //vtkIdType blueId, redId;
             vtkSmartPointer<vtkIdTypeArray> blueCenterIds, redCenterIds;
             vtkIdType lastBlueId, lastRedId;
-            int centerNum = numberOfFaces / 1000 > 20 ? 20 : numberOfFaces / 1000;
+            int centerNum = 1;
             int clusterCnt = 0;
 
-            while (clusterCnt < 1) {
+            while (clusterCnt < 5) {
                 // get center of each cluster
                 //getCenterFaceId(blueIds, centers, blueId);
                 //getCenterFaceId(redIds, centers, redId);
@@ -503,15 +503,18 @@ public:
                         continue;
                     }
 
-                    neighbors.push_back(neighborCellIds->GetId(k));
+                    vtkIdType neighborCellId = neighborCellIds->GetId(k);
+                    neighbors.push_back(neighborCellId);
 
                     double a, b;
                     a = 2.0 * areas->GetValue(i) / (3 * lateral[j]);
                     b = 2.0 * areas->GetValue(neighborCellIds->GetId(k)) / (3 * lateral[j]);
 
                     double n0[3], n1[3];
-                    normals->GetTuple(j, n0);
-                    normals->GetTuple((j + 1) % 3, n1);
+//                     normals->GetTuple(j, n0);
+//                     normals->GetTuple((j + 1) % 3, n1);
+                    normals->GetTuple(i, n0);
+                    normals->GetTuple(neighborCellId, n1);
                     double tmp = vtkMath::Dot(n0, n1);
                     double alpha = 0.2;
                     double w = alpha * (a + b) + (1 - alpha) * (1 - pow(tmp, 100));
