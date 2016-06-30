@@ -30,6 +30,7 @@
 #include <vtkUnstructuredGrid.h>
 #include <vtkVersion.h>
 
+#include <list>
 #include <unordered_map>
 
 using namespace std;
@@ -75,10 +76,11 @@ public:
             isRedOk = true;
         } else {
             // run the core part
+            // preparation
             vtkSmartPointer<vtkPoints> points = Data->GetPoints();
             vtkSmartPointer<vtkDataArray> dataArray = points->GetData();
+            vtkIdType numberOfFaces = Data->GetNumberOfCells();
 
-            // preparation
             vtkSmartPointer<vtkDoubleArray> centers, areas;
             vtkSmartPointer<vtkMutableUndirectedGraph> g = convertToDualGraph(Data, centers, areas);
             cout << "vertex number : " << g->GetNumberOfVertices() << endl;
@@ -98,17 +100,97 @@ public:
             highlightFace(selectedRedCenterMapper, selectedRedCenterActor, redId, 0, 1, 1);
 
             // start clustering
-            
-            // get adjacent edges
-//             vtkSmartPointer<vtkInEdgeIterator> it =
-//                 vtkSmartPointer<vtkInEdgeIterator>::New();
-//             g->GetInEdges(59, it);
-//             while (it->HasNext()) {
-//                 vtkInEdgeType edge = it->Next();
-//                 cout << "Edge id : " << edge.Id << " Source : " << edge.Source << endl;
-//             }
+            vtkSmartPointer<vtkDataArray> weights = g->GetEdgeData()->GetArray("Weights");
+            double *meshDis = new double[g->GetNumberOfEdges()];
+            for (vtkIdType i = 0; i < g->GetNumberOfEdges(); ++i) {
+                meshDis[i] = weights->GetComponent(i, 0);
+            }
+
+            blueIds = vtkSmartPointer<vtkIdTypeArray>::New();
+            redIds = vtkSmartPointer<vtkIdTypeArray>::New();
+
+            for (vtkIdType i = 0; i < numberOfFaces; ++i) {
+                if (i % 100 == 0) {
+                    cout << i << endl;
+                }
+                double *distances = new double[numberOfFaces];
+
+                // initialize distance
+                for (vtkIdType j = 0; j < numberOfFaces; ++j) {
+                    distances[j] = DBL_MAX;
+                }
+                vtkSmartPointer<vtkInEdgeIterator> it = vtkSmartPointer<vtkInEdgeIterator>::New();
+                g->GetInEdges(i, it);
+                while (it->HasNext()) {
+                    vtkInEdgeType edge = it->Next();
+                    distances[edge.Source] = meshDis[edge.Id];
+                }
+                distances[i] = 0.0;
+
+                unordered_map<int, bool> S;
+                S[i] = true;
+
+                list<int> Q;
+                for (int j = 0; j < numberOfFaces; ++j) {
+                    if (i == j) {
+                        continue;
+                    }
+                    Q.push_back(j);
+                }
+
+                while (Q.size()) {
+                    // u = EXTRACT_MIN(Q)
+                    double minDis = DBL_MAX;
+                    int u;
+                    list<int>::iterator listMinIt;
+                    for (list<int>::iterator listIt = Q.begin(); listIt != Q.end(); ++listIt) {
+                        double tmp = distances[*listIt];
+                        if (tmp < minDis) {
+                            minDis = tmp;
+                            u = *listIt;
+                            listMinIt = listIt;
+                        }
+                    }
+                    Q.erase(listMinIt);
+
+                    // S <- S union {u}
+                    S[u] = true;
 
 
+                    // for each vertex v in u's neighbor, do "relax" operation
+                    vtkSmartPointer<vtkInEdgeIterator> uIt = vtkSmartPointer<vtkInEdgeIterator>::New();
+                    g->GetInEdges(u, uIt);
+                    while (uIt->HasNext()) {
+                        vtkInEdgeType uEdge = uIt->Next();
+                        vtkIdType v = uEdge.Source;
+                        if (S[v]) {
+                            continue;
+                        }
+
+                        double tmp = distances[u] + meshDis[uEdge.Id];
+                        if (distances[v] > tmp) {
+                            distances[v] = tmp;
+                        }
+                    }
+                }
+
+                if (distances[blueId] < distances[redId]) {
+                    blueIds->InsertNextValue(i);
+                } else {
+                    redIds->InsertNextValue(i);
+                }
+
+                delete[] distances;
+            }
+
+            // re-render clusters
+            selectedBlueMapper = vtkSmartPointer<vtkDataSetMapper>::New();
+            selectedBlueActor = vtkSmartPointer<vtkActor>::New();
+            highlightFace(selectedBlueMapper, selectedBlueActor, blueIds, 0, 0, 1);
+
+            selectedRedMapper = vtkSmartPointer<vtkDataSetMapper>::New();
+            selectedRedActor = vtkSmartPointer<vtkActor>::New();
+            highlightFace(selectedRedMapper, selectedRedActor, redIds, 1, 0, 0);
         }
         vtkInteractorStyleTrackballCamera::OnMiddleButtonDown();
     }
@@ -340,12 +422,10 @@ public:
                     normals->GetTuple(j, n0);
                     normals->GetTuple((j + 1) % 3, n1);
                     double tmp = vtkMath::Dot(n0, n1);
-                    double w = 0.5 * (a + b + 1 - tmp * tmp);
+                    double alpha = 0.2;
+                    double w = alpha * (a + b) + (1 - alpha) * (1 - tmp * tmp);
 
                     meshDis->InsertNextValue(w);
-
-                    //printf("(a, b, w, tmp, theta) : (%lf, %lf, %lf, %lf, %lf)", a, b, w, tmp, acos(tmp) * 180.0 / vtkMath::Pi());
-                    //getchar();
                 }
             }
 

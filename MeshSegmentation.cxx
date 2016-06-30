@@ -12,7 +12,7 @@ using namespace std;
 vtkStandardNewMacro(customMouseInteractorStyle);
 
 int main() {
-    string inputFileName = "D:\\workspace\\objects\\32_object34.stl";
+    string inputFileName = "D:\\workspace\\objects\\32_object34_simplified.stl";
 
     vtkSmartPointer<vtkSTLReader> reader = vtkSmartPointer<vtkSTLReader>::New();
     reader->SetFileName(inputFileName.c_str());
