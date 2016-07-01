@@ -36,11 +36,24 @@
 
 #include <algorithm>
 #include <list>
+#include <set>
 #include <unordered_map>
 
 #include "vtkConvertToDualGraph.h"
 
 using namespace std;
+
+typedef pair<vtkIdType, double> heapElem;
+
+class heapElemComp {
+public:
+    bool operator() (const heapElem& A, const heapElem& B) {
+        if (A.second == B.second) {
+            return A.first < B.first;
+        }
+        return A.second < B.second;
+    }
+};
 
 class customMouseInteractorStyle : public vtkInteractorStyleTrackballCamera {
 public:
@@ -106,7 +119,7 @@ public:
             unordered_map<int, double*> distances;
             int iterationCnt = 0;
 
-            while (iterationCnt < 5) {
+            while (iterationCnt < 10) {
                 vtkIdType blueId, redId;
 
                 // get center of each cluster
@@ -118,11 +131,11 @@ public:
                 }
 
                 if (!distances[blueId]) {
-                    distances[blueId] = getDijkstraTable(numberOfFaces, meshDis, blueId, g);
+                    distances[blueId] = getDijkstraTable(meshDis, blueId, g);
                 }
 
                 if (!distances[redId]) {
-                    distances[redId] = getDijkstraTable(numberOfFaces, meshDis, redId, g);
+                    distances[redId] = getDijkstraTable(meshDis, redId, g);
                 }
 
                 blueIds = vtkSmartPointer<vtkIdTypeArray>::New();
@@ -202,11 +215,10 @@ public:
         isRightButtonDown = false;
     }
 
-    double* getDijkstraTable(const vtkIdType& numberOfFaces, 
-                                const vtkSmartPointer<vtkDoubleArray>& meshDis,
-                                int faceId,
-                                const vtkSmartPointer<vtkMutableUndirectedGraph>& g) {
+    double* getDijkstraTable(const vtkSmartPointer<vtkDoubleArray>& meshDis, int faceId, const vtkSmartPointer<vtkMutableUndirectedGraph>& g) {
+        vtkIdType numberOfFaces = g->GetVertexData()->GetNumberOfTuples();
         double *distances = new double[numberOfFaces];
+        set<heapElem, heapElemComp> minHeap;
 
         // initialize distance
         for (vtkIdType j = 0; j < numberOfFaces; ++j) {
@@ -223,28 +235,18 @@ public:
         unordered_map<int, bool> S;
         S[faceId] = true;
 
-        list<int> Q;
         for (int j = 0; j < numberOfFaces; ++j) {
             if (faceId == j) {
                 continue;
             }
-            Q.push_back(j);
+            pair<vtkIdType, double> tmpPair(j, distances[j]);
+            minHeap.insert(tmpPair);
         }
 
-        while (Q.size()) {
+        while (minHeap.size()) {
             // u = EXTRACT_MIN(Q)
-            double minDis = DBL_MAX;
-            int u;
-            list<int>::iterator listMinIt;
-            for (list<int>::iterator listIt = Q.begin(); listIt != Q.end(); ++listIt) {
-                double tmp = distances[*listIt];
-                if (tmp < minDis) {
-                    minDis = tmp;
-                    u = *listIt;
-                    listMinIt = listIt;
-                }
-            }
-            Q.erase(listMinIt);
+            vtkIdType u = minHeap.begin()->first;
+            minHeap.erase(minHeap.begin());
 
             // S <- S union {u}
             S[u] = true;
@@ -261,7 +263,11 @@ public:
 
                 double tmp = distances[u] + meshDis->GetValue(uEdge.Id);
                 if (distances[v] > tmp) {
+                    pair<vtkIdType, double> tmpPair(v, distances[v]);
+                    minHeap.erase(minHeap.find(tmpPair));
                     distances[v] = tmp;
+                    tmpPair = pair<vtkIdType, double>(v, distances[v]);
+                    minHeap.insert(tmpPair);
                 }
             }
         }
