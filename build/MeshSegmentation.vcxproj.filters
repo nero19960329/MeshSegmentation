@@ -7,6 +7,9 @@
     <ClCompile Include="customMouseInteractorStyle.h">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="vtkConvertToDualGraph.cxx">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="..\CMakeLists.txt" />
@@ -15,5 +18,10 @@
     <Filter Include="Source Files">
       <UniqueIdentifier>{5C800FB2-39D1-4871-932A-23CACA0BDA3B}</UniqueIdentifier>
     </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="vtkConvertToDualGraph.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

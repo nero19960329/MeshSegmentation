@@ -313,11 +313,15 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
   <ItemGroup>
     <ClCompile Include="..\MeshSegmentation.cxx" />
     <ClCompile Include="customMouseInteractorStyle.h" />
+    <ClCompile Include="vtkConvertToDualGraph.cxx" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="D:/workspace/MeshSegmentation/build/ZERO_CHECK.vcxproj">
       <Project>1A0A8510-297C-4D27-8811-27FE3DA098D2</Project>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="vtkConvertToDualGraph.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

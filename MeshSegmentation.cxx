@@ -12,7 +12,7 @@ using namespace std;
 vtkStandardNewMacro(customMouseInteractorStyle);
 
 int main() {
-    string inputFileName = "D:\\workspace\\objects\\4_object6.stl";
+    string inputFileName = "D:\\workspace\\objects\\28_object30.stl";
 
     vtkSmartPointer<vtkSTLReader> reader = vtkSmartPointer<vtkSTLReader>::New();
     reader->SetFileName(inputFileName.c_str());
@@ -28,9 +28,6 @@ int main() {
     for (int i = 0; i < numberOfFaces; ++i) {
         mesh->GetCellPoints(i, faceIndex);
         vtkIdType vertexIndex = faceIndex->GetId(0);
-//         cout << dataArray->GetComponent(vertexIndex, 0) << " "
-//             << dataArray->GetComponent(vertexIndex, 1) << " "
-//             << dataArray->GetComponent(vertexIndex, 2) << endl;
     }
 
     vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
