@@ -94,49 +94,63 @@ public:
                 meshDis[i] = weights->GetComponent(i, 0);
             }
 
-            //double **distances = new double*[numberOfFaces];
+            vtkIdType lastBlueId, lastRedId;
             unordered_map<int, double*> distances;
+            int iterationCnt = 0;
 
-            vtkIdType blueId, redId;
+            while (iterationCnt < 5) {
+                vtkIdType blueId, redId;
 
-            // get center of each cluster
-            getCenterFaceId(blueIds, centers, blueId);
-            getCenterFaceId(redIds, centers, redId);
+                // get center of each cluster
+                getCenterFaceId(blueIds, centers, blueId);
+                getCenterFaceId(redIds, centers, redId);
 
-            if (!distances[blueId]) {
-                distances[blueId] = getDijkstraTable(numberOfFaces, meshDis, blueId, g);
-            }
-
-            if (!distances[redId]) {
-                distances[redId] = getDijkstraTable(numberOfFaces, meshDis, redId, g);
-            }
-
-            blueIds = vtkSmartPointer<vtkIdTypeArray>::New();
-            redIds = vtkSmartPointer<vtkIdTypeArray>::New();
-
-            for (vtkIdType i = 0; i < numberOfFaces; ++i) {
-                if (distances[blueId][i] < distances[redId][i]) {
-                    blueIds->InsertNextValue(i);
-                } else {
-                    redIds->InsertNextValue(i);
+                if (blueId == lastBlueId || redId == lastRedId) {
+                    break;
                 }
+
+                if (!distances[blueId]) {
+                    distances[blueId] = getDijkstraTable(numberOfFaces, meshDis, blueId, g);
+                }
+
+                if (!distances[redId]) {
+                    distances[redId] = getDijkstraTable(numberOfFaces, meshDis, redId, g);
+                }
+
+                blueIds = vtkSmartPointer<vtkIdTypeArray>::New();
+                redIds = vtkSmartPointer<vtkIdTypeArray>::New();
+
+                for (vtkIdType i = 0; i < numberOfFaces; ++i) {
+                    if (distances[blueId][i] < distances[redId][i]) {
+                        blueIds->InsertNextValue(i);
+                    } else {
+                        redIds->InsertNextValue(i);
+                    }
+                }
+
+                // re-render clusters
+                selectedBlueMapper = vtkSmartPointer<vtkDataSetMapper>::New();
+                selectedBlueActor = vtkSmartPointer<vtkActor>::New();
+                highlightFace(selectedBlueMapper, selectedBlueActor, blueIds, 0, 0, 1);
+
+                selectedRedMapper = vtkSmartPointer<vtkDataSetMapper>::New();
+                selectedRedActor = vtkSmartPointer<vtkActor>::New();
+                highlightFace(selectedRedMapper, selectedRedActor, redIds, 1, 0, 0);
+
+                vtkSmartPointer<vtkDataSetMapper> selectedBlueCenterMapper = vtkSmartPointer<vtkDataSetMapper>::New();
+                vtkSmartPointer<vtkActor> selectedBlueCenterActor = vtkSmartPointer<vtkActor>::New();
+                vtkSmartPointer<vtkDataSetMapper> selectedRedCenterMapper = vtkSmartPointer<vtkDataSetMapper>::New();
+                vtkSmartPointer<vtkActor> selectedRedCenterActor = vtkSmartPointer<vtkActor>::New();
+                highlightFace(selectedBlueCenterMapper, selectedBlueCenterActor, blueId, 1, 1, 0);
+                highlightFace(selectedRedCenterMapper, selectedRedCenterActor, redId, 0, 1, 1);
+
+                lastBlueId = blueId;
+                lastRedId = redId;
+
+                ++iterationCnt;
             }
 
-            // re-render clusters
-            selectedBlueMapper = vtkSmartPointer<vtkDataSetMapper>::New();
-            selectedBlueActor = vtkSmartPointer<vtkActor>::New();
-            highlightFace(selectedBlueMapper, selectedBlueActor, blueIds, 0, 0, 1);
-
-            selectedRedMapper = vtkSmartPointer<vtkDataSetMapper>::New();
-            selectedRedActor = vtkSmartPointer<vtkActor>::New();
-            highlightFace(selectedRedMapper, selectedRedActor, redIds, 1, 0, 0);
-
-            vtkSmartPointer<vtkDataSetMapper> selectedBlueCenterMapper = vtkSmartPointer<vtkDataSetMapper>::New();
-            vtkSmartPointer<vtkActor> selectedBlueCenterActor = vtkSmartPointer<vtkActor>::New();
-            vtkSmartPointer<vtkDataSetMapper> selectedRedCenterMapper = vtkSmartPointer<vtkDataSetMapper>::New();
-            vtkSmartPointer<vtkActor> selectedRedCenterActor = vtkSmartPointer<vtkActor>::New();
-            highlightFace(selectedBlueCenterMapper, selectedBlueCenterActor, blueId, 1, 1, 0);
-            highlightFace(selectedRedCenterMapper, selectedRedCenterActor, redId, 0, 1, 1);
+            printf("done!\n");
         }
         vtkInteractorStyleTrackballCamera::OnMiddleButtonDown();
     }
@@ -443,8 +457,19 @@ public:
                     double n0[3], n1[3];
                     normals->GetTuple(i, n0);
                     normals->GetTuple(neighborCellId, n1);
+                    double c0[3], c1[3];
+                    centers->GetTuple(i, c0);
+                    centers->GetTuple(neighborCellId, c1);
+                    double w[3] = { c1[0] - c0[0], c1[1] - c0[1], c1[2] - c0[2] };
+
                     double tmp = vtkMath::Dot(n0, n1);
-                    double phy = a + b, angle = 1 - pow(tmp, 2);
+                    double phy, angle;
+                    phy = a + b;
+                    angle = 1 - tmp;
+
+                    if (vtkMath::Dot(n0, w) < 0) {  // convex
+                        angle *= 0.2;
+                    }
 
                     phyDis->InsertNextValue(phy);
                     angleDis->InsertNextValue(angle);
@@ -459,7 +484,7 @@ public:
             }
         }
 
-        double delta = 0.2;
+        double delta = 0.5;
         vtkIdType edgeNumber = phyDis->GetNumberOfTuples();
         phyDisAvg /= edgeNumber;
         angleDisAvg /= edgeNumber;
