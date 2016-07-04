@@ -6,8 +6,6 @@
 #include "build/customInteractorStyle.h"
 
 #include <iostream>
-#include <cstdlib>
-#include <ctime>
 #include <stdio.h>
 #include <string>
 
@@ -16,10 +14,6 @@ using namespace std;
 vtkStandardNewMacro(customInteractorStyle);
 
 int main() {
-    // get random seed
-    srand((unsigned)time(NULL));
-    rand();
-
     // get input file name
     int objNum;
     printf("Please input object number : ");
