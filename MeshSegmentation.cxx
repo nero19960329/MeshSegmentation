@@ -1,21 +1,34 @@
+#include <vtkCommand.h>
 #include <vtkSTLReader.h>
 #include <vtkPolyDataMapper.h>
 #include <vtkIdList.h>
 
-#include "build/customMouseInteractorStyle.h"
+#include "build/customInteractorStyle.h"
 
 #include <iostream>
+#include <cstdlib>
+#include <ctime>
+#include <stdio.h>
 #include <string>
 
 using namespace std;
 
-vtkStandardNewMacro(customMouseInteractorStyle);
+vtkStandardNewMacro(customInteractorStyle);
 
 int main() {
-    string inputFileName = "D:\\workspace\\objects\\0_object2.stl";
+    // get random seed
+    srand((unsigned)time(NULL));
+    rand();
+
+    // get input file name
+    int objNum;
+    printf("Please input object number : ");
+    scanf("%d", &objNum);
+    char inputFileName[201];
+    sprintf(inputFileName, "D:\\workspace\\objects\\%d_object%d.stl", objNum, (objNum + 2));
 
     vtkSmartPointer<vtkSTLReader> reader = vtkSmartPointer<vtkSTLReader>::New();
-    reader->SetFileName(inputFileName.c_str());
+    reader->SetFileName(inputFileName);
     reader->Update();
 
     vtkSmartPointer<vtkPolyData> mesh = reader->GetOutput();
@@ -42,9 +55,11 @@ int main() {
     vtkSmartPointer<vtkRenderWindowInteractor> renderWindowInteractor = vtkSmartPointer<vtkRenderWindowInteractor>::New();
     renderWindowInteractor->SetRenderWindow(renderWindow);
 
-    vtkSmartPointer<customMouseInteractorStyle> style = vtkSmartPointer<customMouseInteractorStyle>::New();
+    UserInteractionManager *uiManager = new UserInteractionManager(mesh);
+
+    vtkSmartPointer<customInteractorStyle> style = vtkSmartPointer<customInteractorStyle>::New();
     style->SetDefaultRenderer(renderer);
-    style->Data = mesh;
+    style->SetUIManager(uiManager);
 
     renderWindowInteractor->SetInteractorStyle(style);
 

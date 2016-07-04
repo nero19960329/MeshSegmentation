@@ -312,7 +312,7 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\MeshSegmentation.cxx" />
-    <ClCompile Include="customMouseInteractorStyle.h" />
+    <ClCompile Include="customInteractorStyle.h" />
     <ClCompile Include="vtkConvertToDualGraph.cxx" />
   </ItemGroup>
   <ItemGroup>
@@ -321,6 +321,7 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="UserInteractionManager.h" />
     <ClInclude Include="vtkConvertToDualGraph.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

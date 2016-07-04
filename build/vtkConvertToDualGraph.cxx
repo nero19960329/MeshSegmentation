@@ -165,7 +165,7 @@ int vtkConvertToDualGraph::RequestData(vtkInformation *vtkNotUsed(request), vtkI
         }
     }
 
-    double delta = 0.5;
+    double delta = 0.3;
     vtkIdType edgeNumber = phyDis->GetNumberOfTuples();
     phyDisAvg /= edgeNumber;
     angleDisAvg /= edgeNumber;

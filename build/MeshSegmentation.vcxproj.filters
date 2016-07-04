@@ -4,10 +4,10 @@
     <ClCompile Include="..\MeshSegmentation.cxx">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="customMouseInteractorStyle.h">
+    <ClCompile Include="vtkConvertToDualGraph.cxx">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="vtkConvertToDualGraph.cxx">
+    <ClCompile Include="customInteractorStyle.h">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -21,6 +21,9 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="vtkConvertToDualGraph.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="UserInteractionManager.h">
       <Filter>Source Files</Filter>
     </ClInclude>
   </ItemGroup>
