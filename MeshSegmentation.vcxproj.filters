@@ -1,29 +1,29 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <ClCompile Include="..\MeshSegmentation.cxx">
+    <ClCompile Include="D:\workspace\MeshSegmentation\MeshSegmentation.cxx">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="vtkConvertToDualGraph.cxx">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="customInteractorStyle.h">
-      <Filter>Source Files</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <CustomBuild Include="..\CMakeLists.txt" />
+    <CustomBuild Include="D:\workspace\MeshSegmentation\CMakeLists.txt" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Source Files">
-      <UniqueIdentifier>{5C800FB2-39D1-4871-932A-23CACA0BDA3B}</UniqueIdentifier>
+      <UniqueIdentifier>{52E38F89-B5C1-49A7-AEC8-222143378852}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="vtkConvertToDualGraph.h">
+    <ClInclude Include="customInteractorStyle.h">
       <Filter>Source Files</Filter>
     </ClInclude>
     <ClInclude Include="UserInteractionManager.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="vtkConvertToDualGraph.h">
       <Filter>Source Files</Filter>
     </ClInclude>
   </ItemGroup>

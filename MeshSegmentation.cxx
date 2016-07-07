@@ -3,7 +3,7 @@
 #include <vtkPolyDataMapper.h>
 #include <vtkIdList.h>
 
-#include "build/customInteractorStyle.h"
+#include "customInteractorStyle.h"
 
 #include <iostream>
 #include <stdio.h>
