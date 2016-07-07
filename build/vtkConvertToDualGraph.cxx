@@ -149,7 +149,7 @@ int vtkConvertToDualGraph::RequestData(vtkInformation *vtkNotUsed(request), vtkI
                 angle = 1 - tmp;
 
                 if (vtkMath::Dot(n0, w) < 0) {  // convex
-                    angle *= 0.2;
+                    angle *= 0.20;
                 }
 
                 phyDis->InsertNextValue(phy);

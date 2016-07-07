@@ -123,6 +123,10 @@ public:
             lastCenterIds.push_back(-1);
         }
 
+        list<double> varianceList;
+        bool periodFlag = false;
+        double minVariance = DBL_MAX;
+        double* evaluations = new double[clusterCnt + 1];
         double **possibilities = new double*[numberOfFaces];
         while (iterationCnt < 9) {
             printf("Clutering --- iteration %d . . .\n", (iterationCnt + 1));
@@ -159,6 +163,10 @@ public:
                 break;
             }
 
+            for (int i = 0; i <= clusterCnt; ++i) {
+                evaluations[i] = 0.0;
+            }
+
             list<vtkIdType> *minDisIds = new list<vtkIdType>[clusterCenterIds.size()];
             for (vtkIdType i = 0; i < numberOfFaces; ++i) {
                 double minDis = DBL_MAX;
@@ -172,6 +180,42 @@ public:
                     ++clusterId;
                 }
                 minDisIds[minDisId].push_back(i);
+                evaluations[minDisId] += minDis;
+            }
+
+            printf("evaluations : \n");
+            double avgEvaluation = 0.0;
+            for (int i = 0; i <= clusterCnt; ++i) {
+                evaluations[i] /= minDisIds[i].size();
+                avgEvaluation += evaluations[i];
+                printf("cluster %d --- size : %d, average dis : %lf\n", i, minDisIds[i].size(), evaluations[i]);
+            }
+            avgEvaluation /= (clusterCnt + 1);
+
+            double varEvaluation = 0.0;
+            for (int i = 0; i <= clusterCnt; ++i) {
+                varEvaluation += (evaluations[i] - avgEvaluation) * (evaluations[i] - avgEvaluation);
+            }
+            varEvaluation /= (clusterCnt + 1);
+            printf("variance : %lf\n", varEvaluation);
+
+            if (!periodFlag) {
+                for (list<double>::iterator listIt = varianceList.begin(); listIt != varianceList.end(); ++listIt) {
+                    if (varEvaluation == *listIt) {
+                        periodFlag = true;
+                        while (listIt != varianceList.end()) {
+                            if (*listIt < minVariance) {
+                                minVariance = *listIt;
+                            }
+                            ++listIt;
+                        }
+                        --listIt;
+                    }
+                }
+
+                if (!periodFlag) {
+                    varianceList.push_back(varEvaluation);
+                }
             }
 
             /* ========================================================= */
@@ -238,6 +282,12 @@ public:
                 ++colorIt;
             }
 
+            if (periodFlag) {
+                if (varEvaluation == minVariance) {
+                    break;
+                }
+            }
+
             ++iterationCnt;
         }
 
@@ -251,16 +301,16 @@ public:
         h = h >= 1 ? h - 1 : h;
         
         unsigned char* clusterColor = HSVtoRGB(h, s, v);
-        clusterColors.push_front(clusterColor);
+        clusterColors.push_back(clusterColor);
 
         vtkSmartPointer<vtkIdTypeArray> clusterFaceId = vtkSmartPointer<vtkIdTypeArray>::New();
         clusterFaceId->SetNumberOfComponents(1);
-        clusterFaceIds.push_front(clusterFaceId);
+        clusterFaceIds.push_back(clusterFaceId);
     }
 
     void Selecting(const vtkSmartPointer<vtkCellPicker>& picker, const vtkSmartPointer<vtkRenderWindowInteractor>& interactor) {
-        vtkSmartPointer<vtkIdTypeArray>& ids = *(clusterFaceIds.begin());
-        unsigned char* selectedColor = *(clusterColors.begin());
+        vtkSmartPointer<vtkIdTypeArray>& ids = *(--clusterFaceIds.end());
+        unsigned char* selectedColor = *(--clusterColors.end());
 
         vtkIdType pickId = picker->GetCellId();
         if (pickId != -1) {
