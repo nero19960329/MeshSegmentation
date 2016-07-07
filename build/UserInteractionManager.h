@@ -124,7 +124,7 @@ public:
         }
 
         double **possibilities = new double*[numberOfFaces];
-        while (iterationCnt < 10) {
+        while (iterationCnt < 9) {
             printf("Clutering --- iteration %d . . .\n", (iterationCnt + 1));
 
             list<vtkIdType> clusterCenterIds;
@@ -195,12 +195,18 @@ public:
 //                     ++centerIt;
 //                 }
 // 
-//                 double tmpColor[3] = { 0.0, 0.0, 0.0 };
+//                 double tmpColor[3] = { 0, 0, 0 };
+//                 double ratio = 0.2;
 //                 list<unsigned char*>::iterator colorIt = clusterColors.begin();
 //                 for (vtkIdType j = 0; j <= clusterCnt; ++j) {
-//                     tmpColor[0] += possibilities[i][j] * (*colorIt)[0];
-//                     tmpColor[1] += possibilities[i][j] * (*colorIt)[1];
-//                     tmpColor[2] += possibilities[i][j] * (*colorIt)[2];
+//                     if (possibilities[i][j] > 0.5 * (1 + ratio)) {
+//                         tmpColor[0] = (*colorIt)[0];
+//                         tmpColor[1] = (*colorIt)[1];
+//                         tmpColor[2] = (*colorIt)[2];
+//                     }
+// //                     tmpColor[0] += possibilities[i][j] * (*colorIt)[0];
+// //                     tmpColor[1] += possibilities[i][j] * (*colorIt)[1];
+// //                     tmpColor[2] += possibilities[i][j] * (*colorIt)[2];
 //                     ++colorIt;
 //                 }
 // 
@@ -242,9 +248,7 @@ public:
         ++clusterCnt;
 
         h += goldenRatio;
-        if (h >= 1) {
-            h -= 1;
-        }
+        h = h >= 1 ? h - 1 : h;
         
         unsigned char* clusterColor = HSVtoRGB(h, s, v);
         clusterColors.push_front(clusterColor);
@@ -258,10 +262,11 @@ public:
         vtkSmartPointer<vtkIdTypeArray>& ids = *(clusterFaceIds.begin());
         unsigned char* selectedColor = *(clusterColors.begin());
 
-        if (picker->GetCellId() != -1) {
-            if (!idHash[picker->GetCellId()]) {
-                ids->InsertNextValue(picker->GetCellId());
-                idHash[picker->GetCellId()] = true;
+        vtkIdType pickId = picker->GetCellId();
+        if (pickId != -1) {
+            if (!idHash[pickId]) {
+                ids->InsertNextValue(pickId);
+                idHash[pickId] = true;
             }
 
             highlightFace(interactor, ids, selectedColor);
@@ -396,8 +401,7 @@ public:
 
         double minDis = DBL_MAX;
         for (vtkIdType i = 0; i < centers->GetNumberOfTuples(); ++i) {
-            double tmp[3] = { centers->GetTuple(i)[0], centers->GetTuple(i)[1], centers->GetTuple(i)[2] };
-            double dis = vtkMath::Distance2BetweenPoints(center, tmp);
+            double dis = vtkMath::Distance2BetweenPoints(center, centers->GetTuple(i));
             if (dis < minDis) {
                 minDis = dis;
                 centerId = i;
