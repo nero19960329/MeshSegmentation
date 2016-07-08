@@ -15,14 +15,16 @@ vtkStandardNewMacro(customInteractorStyle);
 
 int main() {
     // get input file name
-    int objNum;
-    printf("Please input object number : ");
-    scanf("%d", &objNum);
-    char inputFileName[201];
-    sprintf(inputFileName, "D:\\workspace\\objects\\%d_object%d.stl", objNum, (objNum + 2));
+    char inputFileName[101];
+    printf("Please input object file name : ");
+    cin >> inputFileName;
+    char prefix[] = "../objects/";
+    char suffix[] = ".stl";
+    strcat(inputFileName, suffix);
+    strcat(prefix, inputFileName);
 
     vtkSmartPointer<vtkSTLReader> reader = vtkSmartPointer<vtkSTLReader>::New();
-    reader->SetFileName(inputFileName);
+    reader->SetFileName(prefix);
     reader->Update();
 
     vtkSmartPointer<vtkPolyData> mesh = reader->GetOutput();

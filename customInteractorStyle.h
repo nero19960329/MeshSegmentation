@@ -6,9 +6,18 @@
 #include <vtkSmartPointer.h>
 #include <vtkVersion.h>
 
+#include <thread>
+
 #include "UserInteractionManager.h"
 
 using namespace std;
+
+class threadRun {
+public:
+    void operator() (UserInteractionManager* uiManager, const vtkSmartPointer<vtkRenderWindowInteractor>& interactor) {
+        uiManager->StartSegmentation(interactor);
+    }
+};
 
 class customInteractorStyle : public vtkInteractorStyleTrackballCamera {
 public:
@@ -63,6 +72,8 @@ public:
         string key = rwi->GetKeySym();
 
         if (key == "Return") {
+            //threadRun r;
+            //thread t(ref(r), uiManager, this->Interactor);
             uiManager->StartSegmentation(this->Interactor);
         }
 

@@ -96,6 +96,10 @@ public:
         clusterFaceIds.push_front(clusterFaceId);
     }
 
+    void test() {
+        printf("threadTest\n");
+    }
+
     void StartSegmentation(const vtkSmartPointer<vtkRenderWindowInteractor>& interactor) {
         // preparation
         vtkSmartPointer<vtkPoints> points = Data->GetPoints();
@@ -128,7 +132,7 @@ public:
         double minVariance = DBL_MAX;
         double* evaluations = new double[clusterCnt + 1];
         double **possibilities = new double*[numberOfFaces];
-        while (iterationCnt < 9) {
+        while (iterationCnt < 1) {
             printf("Clutering --- iteration %d . . .\n", (iterationCnt + 1));
 
             list<vtkIdType> clusterCenterIds;
@@ -172,14 +176,19 @@ public:
                 double minDis = DBL_MAX;
                 vtkIdType minDisId;
                 int clusterId = 0;
-                for (list<vtkIdType>::iterator it = clusterCenterIds.begin(); it != clusterCenterIds.end(); ++it) {
-                    if (distances[*it][i] < minDis) {
-                        minDis = distances[*it][i];
+                for (auto centerId : clusterCenterIds) {
+                    if (distances[centerId][i] < minDis) {
+                        minDis = distances[centerId][i];
                         minDisId = clusterId;
                     }
                     ++clusterId;
                 }
-                minDisIds[minDisId].push_back(i);
+                if (minDis == DBL_MAX) {
+                    printf("error vtkIdType : %d\n", (int)i);
+                    minDis = 0.0;
+                } else {
+                    minDisIds[minDisId].push_back(i);
+                }
                 evaluations[minDisId] += minDis;
             }
 
