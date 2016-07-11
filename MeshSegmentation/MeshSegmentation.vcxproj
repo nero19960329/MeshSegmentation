@@ -1,0 +1,266 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{B12702AD-ABFB-343A-A199-8E24837244A3}</ProjectGuid>
+    <Keyword>Qt4VSv1.0</Keyword>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <PlatformToolset>v110</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <PlatformToolset>v110</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <PlatformToolset>v110</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <PlatformToolset>v110</PlatformToolset>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup>
+    <_ProjectFileVersion>11.0.50727.1</_ProjectFileVersion>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\</OutDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\</OutDir>
+    <LinkIncremental>true</LinkIncremental>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\</OutDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\</OutDir>
+    <LinkIncremental>false</LinkIncremental>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <PreprocessorDefinitions>UNICODE;WIN32;WIN64;QT_DLL;QT_CORE_LIB;QT_GUI_LIB;QT_WIDGETS_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>.\GeneratedFiles;.;$(QTDIR)\include;.\GeneratedFiles\$(ConfigurationName);$(QTDIR)\include\QtCore;$(QTDIR)\include\QtGui;$(QTDIR)\include\QtWidgets;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <Optimization>Disabled</Optimization>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
+      <TreatWChar_tAsBuiltInType>true</TreatWChar_tAsBuiltInType>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <OutputFile>$(OutDir)\$(ProjectName).exe</OutputFile>
+      <AdditionalLibraryDirectories>$(QTDIR)\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>qtmaind.lib;Qt5Cored.lib;Qt5Guid.lib;Qt5Widgetsd.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <PreprocessorDefinitions>UNICODE;WIN32;WIN64;QT_DLL;QT_CORE_LIB;QT_GUI_LIB;QT_WIDGETS_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>.\GeneratedFiles;.;$(QTDIR)\include;.\GeneratedFiles\$(ConfigurationName);D:\VTK\VTKInstall\include;D:\VTK\VTKInstall\include\vtk-7.0;$(QTDIR)\include\QtCore;$(QTDIR)\include\QtGui;$(QTDIR)\include\QtWidgets;$(QTDIR)\mkspecs\win32-msvc2012;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <Optimization>Disabled</Optimization>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
+      <TreatWChar_tAsBuiltInType>true</TreatWChar_tAsBuiltInType>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <OutputFile>$(OutDir)\$(ProjectName).exe</OutputFile>
+      <AdditionalLibraryDirectories>$(QTDIR)\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>qtmaind.lib;Qt5Cored.lib;Qt5Guid.lib;Qt5Widgetsd.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;comdlg32.lib;advapi32.lib;D:\VTK\VTKInstall\lib\vtkDomainsChemistryOpenGL2-7.0.lib;D:\VTK\VTKInstall\lib\vtkFiltersFlowPaths-7.0.lib;D:\VTK\VTKInstall\lib\vtkFiltersGeneric-7.0.lib;D:\VTK\VTKInstall\lib\vtkFiltersHyperTree-7.0.lib;D:\VTK\VTKInstall\lib\vtkFiltersParallelImaging-7.0.lib;D:\VTK\VTKInstall\lib\vtkFiltersProgrammable-7.0.lib;D:\VTK\VTKInstall\lib\vtkFiltersSelection-7.0.lib;D:\VTK\VTKInstall\lib\vtkFiltersSMP-7.0.lib;D:\VTK\VTKInstall\lib\vtkFiltersVerdict-7.0.lib;D:\VTK\VTKInstall\lib\vtkverdict-7.0.lib;D:\VTK\VTKInstall\lib\vtkGeovisCore-7.0.lib;D:\VTK\VTKInstall\lib\vtkproj4-7.0.lib;D:\VTK\VTKInstall\lib\vtkGUISupportQtSQL-7.0.lib;D:\VTK\VTKInstall\lib\vtkIOSQL-7.0.lib;D:\VTK\VTKInstall\lib\vtksqlite-7.0.lib;D:\VTK\VTKInstall\lib\vtkImagingMath-7.0.lib;D:\VTK\VTKInstall\lib\vtkImagingMorphological-7.0.lib;D:\VTK\VTKInstall\lib\vtkImagingStatistics-7.0.lib;D:\VTK\VTKInstall\lib\vtkImagingStencil-7.0.lib;D:\VTK\VTKInstall\lib\vtkInteractionImage-7.0.lib;D:\VTK\VTKInstall\lib\vtkIOAMR-7.0.lib;D:\VTK\VTKInstall\lib\vtkIOEnSight-7.0.lib;D:\VTK\VTKInstall\lib\vtkIOExodus-7.0.lib;D:\VTK\VTKInstall\lib\vtkIOExport-7.0.lib;D:\VTK\VTKInstall\lib\vtkIOImport-7.0.lib;D:\VTK\VTKInstall\lib\vtkIOInfovis-7.0.lib;D:\VTK\VTKInstall\lib\vtklibxml2-7.0.lib;D:\VTK\VTKInstall\lib\vtkIOLSDyna-7.0.lib;D:\VTK\VTKInstall\lib\vtkIOMINC-7.0.lib;D:\VTK\VTKInstall\lib\vtkIOMovie-7.0.lib;D:\VTK\VTKInstall\lib\vtkoggtheora-7.0.lib;D:\VTK\VTKInstall\lib\vtkIOParallel-7.0.lib;D:\VTK\VTKInstall\lib\vtkjsoncpp-7.0.lib;D:\VTK\VTKInstall\lib\vtkIOParallelXML-7.0.lib;D:\VTK\VTKInstall\lib\vtkIOPLY-7.0.lib;D:\VTK\VTKInstall\lib\vtkIOVideo-7.0.lib;D:\VTK\VTKInstall\lib\vtkRenderingContextOpenGL2-7.0.lib;D:\VTK\VTKInstall\lib\vtkRenderingImage-7.0.lib;D:\VTK\VTKInstall\lib\vtkRenderingLOD-7.0.lib;D:\VTK\VTKInstall\lib\vtkRenderingQt-7.0.lib;D:\VTK\VTKInstall\lib\vtkRenderingVolumeOpenGL2-7.0.lib;D:\VTK\VTKInstall\lib\vtkViewsContext2D-7.0.lib;D:\VTK\VTKInstall\lib\vtkViewsQt-7.0.lib;D:\VTK\VTKInstall\lib\vtkDomainsChemistry-7.0.lib;D:\VTK\VTKInstall\lib\vtkFiltersAMR-7.0.lib;D:\VTK\VTKInstall\lib\vtkexoIIc-7.0.lib;D:\VTK\VTKInstall\lib\vtkFiltersParallel-7.0.lib;D:\VTK\VTKInstall\lib\vtkIONetCDF-7.0.lib;D:\VTK\VTKInstall\lib\vtkNetCDF_cxx-7.0.lib;D:\VTK\VTKInstall\lib\vtkNetCDF-7.0.lib;D:\VTK\VTKInstall\lib\vtkhdf5_hl-7.0.lib;D:\VTK\VTKInstall\lib\vtkhdf5-7.0.lib;D:\VTK\VTKInstall\lib\vtkIOXML-7.0.lib;D:\VTK\VTKInstall\lib\vtkIOXMLParser-7.0.lib;D:\VTK\VTKInstall\lib\vtkexpat-7.0.lib;D:\VTK\VTKInstall\lib\vtkParallelCore-7.0.lib;D:\VTK\VTKInstall\lib\vtkIOLegacy-7.0.lib;D:\VTK\VTKInstall\lib\vtkIOGeometry-7.0.lib;D:\VTK\VTKInstall\lib\vtkFiltersTexture-7.0.lib;D:\VTK\VTKInstall\lib\vtkGUISupportQt-7.0.lib;D:\VTK\VTKInstall\lib\vtkRenderingOpenGL2-7.0.lib;D:\VTK\VTKInstall\lib\vtkglew-7.0.lib;D:\VTK\VTKInstall\lib\vtkViewsInfovis-7.0.lib;D:\VTK\VTKInstall\lib\vtkChartsCore-7.0.lib;D:\VTK\VTKInstall\lib\vtkRenderingContext2D-7.0.lib;D:\VTK\VTKInstall\lib\vtkFiltersImaging-7.0.lib;D:\VTK\VTKInstall\lib\vtkInfovisLayout-7.0.lib;D:\VTK\VTKInstall\lib\vtkInfovisCore-7.0.lib;D:\VTK\VTKInstall\lib\vtkViewsCore-7.0.lib;D:\VTK\VTKInstall\lib\vtkInteractionWidgets-7.0.lib;D:\VTK\VTKInstall\lib\vtkImagingHybrid-7.0.lib;D:\VTK\VTKInstall\lib\vtkIOImage-7.0.lib;D:\VTK\VTKInstall\lib\vtkDICOMParser-7.0.lib;D:\VTK\VTKInstall\lib\vtkIOCore-7.0.lib;D:\VTK\VTKInstall\lib\vtkmetaio-7.0.lib;comctl32.lib;wsock32.lib;D:\VTK\VTKInstall\lib\vtkpng-7.0.lib;D:\VTK\VTKInstall\lib\vtktiff-7.0.lib;D:\VTK\VTKInstall\lib\vtkjpeg-7.0.lib;D:\VTK\VTKInstall\lib\vtkFiltersHybrid-7.0.lib;D:\VTK\VTKInstall\lib\vtkImagingGeneral-7.0.lib;D:\VTK\VTKInstall\lib\vtkImagingSources-7.0.lib;D:\VTK\VTKInstall\lib\vtkFiltersModeling-7.0.lib;D:\VTK\VTKInstall\lib\vtkInteractionStyle-7.0.lib;D:\VTK\VTKInstall\lib\vtkRenderingAnnotation-7.0.lib;D:\VTK\VTKInstall\lib\vtkImagingColor-7.0.lib;D:\VTK\VTKInstall\lib\vtkRenderingVolume-7.0.lib;D:\VTK\VTKInstall\lib\vtkRenderingLabel-7.0.lib;D:\VTK\VTKInstall\lib\vtkRenderingFreeType-7.0.lib;D:\VTK\VTKInstall\lib\vtkRenderingCore-7.0.lib;D:\VTK\VTKInstall\lib\vtkCommonColor-7.0.lib;D:\VTK\VTKInstall\lib\vtkFiltersExtraction-7.0.lib;D:\VTK\VTKInstall\lib\vtkFiltersStatistics-7.0.lib;D:\VTK\VTKInstall\lib\vtkalglib-7.0.lib;D:\VTK\VTKInstall\lib\vtkImagingFourier-7.0.lib;D:\VTK\VTKInstall\lib\vtkImagingCore-7.0.lib;D:\VTK\VTKInstall\lib\vtkFiltersGeometry-7.0.lib;D:\VTK\VTKInstall\lib\vtkFiltersSources-7.0.lib;D:\VTK\VTKInstall\lib\vtkFiltersGeneral-7.0.lib;D:\VTK\VTKInstall\lib\vtkFiltersCore-7.0.lib;D:\VTK\VTKInstall\lib\vtkCommonExecutionModel-7.0.lib;D:\VTK\VTKInstall\lib\vtkCommonComputationalGeometry-7.0.lib;D:\VTK\VTKInstall\lib\vtkCommonDataModel-7.0.lib;D:\VTK\VTKInstall\lib\vtkCommonMisc-7.0.lib;D:\VTK\VTKInstall\lib\vtkCommonTransforms-7.0.lib;D:\VTK\VTKInstall\lib\vtkCommonMath-7.0.lib;D:\VTK\VTKInstall\lib\vtkCommonSystem-7.0.lib;D:\VTK\VTKInstall\lib\vtkCommonCore-7.0.lib;D:\VTK\VTKInstall\lib\vtksys-7.0.lib;ws2_32.lib;Psapi.lib;D:\VTK\VTKInstall\lib\vtkfreetype-7.0.lib;D:\VTK\VTKInstall\lib\vtkzlib-7.0.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <PreprocessorDefinitions>UNICODE;WIN32;WIN64;QT_DLL;QT_NO_DEBUG;NDEBUG;QT_CORE_LIB;QT_GUI_LIB;QT_WIDGETS_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>.\GeneratedFiles;.;$(QTDIR)\include;.\GeneratedFiles\$(ConfigurationName);$(QTDIR)\include\QtCore;$(QTDIR)\include\QtGui;$(QTDIR)\include\QtWidgets;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <DebugInformationFormat />
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <TreatWChar_tAsBuiltInType>true</TreatWChar_tAsBuiltInType>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <OutputFile>$(OutDir)\$(ProjectName).exe</OutputFile>
+      <AdditionalLibraryDirectories>$(QTDIR)\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <GenerateDebugInformation>false</GenerateDebugInformation>
+      <AdditionalDependencies>qtmain.lib;Qt5Core.lib;Qt5Gui.lib;Qt5Widgets.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <PreprocessorDefinitions>UNICODE;WIN32;WIN64;QT_DLL;QT_NO_DEBUG;NDEBUG;QT_CORE_LIB;QT_GUI_LIB;QT_WIDGETS_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>.\GeneratedFiles;.;$(QTDIR)\include;.\GeneratedFiles\$(ConfigurationName);D:\VTK\VTKInstall\include;D:\VTK\VTKInstall\include\vtk-7.0;$(QTDIR)\include\QtCore;$(QTDIR)\include\QtGui;$(QTDIR)\include\QtWidgets;$(QTDIR)\mkspecs\win32-msvc2012;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <DebugInformationFormat />
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <TreatWChar_tAsBuiltInType>true</TreatWChar_tAsBuiltInType>
+      <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <OutputFile>$(OutDir)\$(ProjectName).exe</OutputFile>
+      <AdditionalLibraryDirectories>$(QTDIR)\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <GenerateDebugInformation>false</GenerateDebugInformation>
+      <AdditionalDependencies>qtmain.lib;Qt5Core.lib;Qt5Gui.lib;Qt5Widgets.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;comdlg32.lib;advapi32.lib;D:\VTK\VTKInstall\lib\vtkDomainsChemistryOpenGL2-7.0.lib;D:\VTK\VTKInstall\lib\vtkFiltersFlowPaths-7.0.lib;D:\VTK\VTKInstall\lib\vtkFiltersGeneric-7.0.lib;D:\VTK\VTKInstall\lib\vtkFiltersHyperTree-7.0.lib;D:\VTK\VTKInstall\lib\vtkFiltersParallelImaging-7.0.lib;D:\VTK\VTKInstall\lib\vtkFiltersProgrammable-7.0.lib;D:\VTK\VTKInstall\lib\vtkFiltersSelection-7.0.lib;D:\VTK\VTKInstall\lib\vtkFiltersSMP-7.0.lib;D:\VTK\VTKInstall\lib\vtkFiltersVerdict-7.0.lib;D:\VTK\VTKInstall\lib\vtkverdict-7.0.lib;D:\VTK\VTKInstall\lib\vtkGeovisCore-7.0.lib;D:\VTK\VTKInstall\lib\vtkproj4-7.0.lib;D:\VTK\VTKInstall\lib\vtkGUISupportQtSQL-7.0.lib;D:\VTK\VTKInstall\lib\vtkIOSQL-7.0.lib;D:\VTK\VTKInstall\lib\vtksqlite-7.0.lib;D:\VTK\VTKInstall\lib\vtkImagingMath-7.0.lib;D:\VTK\VTKInstall\lib\vtkImagingMorphological-7.0.lib;D:\VTK\VTKInstall\lib\vtkImagingStatistics-7.0.lib;D:\VTK\VTKInstall\lib\vtkImagingStencil-7.0.lib;D:\VTK\VTKInstall\lib\vtkInteractionImage-7.0.lib;D:\VTK\VTKInstall\lib\vtkIOAMR-7.0.lib;D:\VTK\VTKInstall\lib\vtkIOEnSight-7.0.lib;D:\VTK\VTKInstall\lib\vtkIOExodus-7.0.lib;D:\VTK\VTKInstall\lib\vtkIOExport-7.0.lib;D:\VTK\VTKInstall\lib\vtkIOImport-7.0.lib;D:\VTK\VTKInstall\lib\vtkIOInfovis-7.0.lib;D:\VTK\VTKInstall\lib\vtklibxml2-7.0.lib;D:\VTK\VTKInstall\lib\vtkIOLSDyna-7.0.lib;D:\VTK\VTKInstall\lib\vtkIOMINC-7.0.lib;D:\VTK\VTKInstall\lib\vtkIOMovie-7.0.lib;D:\VTK\VTKInstall\lib\vtkoggtheora-7.0.lib;D:\VTK\VTKInstall\lib\vtkIOParallel-7.0.lib;D:\VTK\VTKInstall\lib\vtkjsoncpp-7.0.lib;D:\VTK\VTKInstall\lib\vtkIOParallelXML-7.0.lib;D:\VTK\VTKInstall\lib\vtkIOPLY-7.0.lib;D:\VTK\VTKInstall\lib\vtkIOVideo-7.0.lib;D:\VTK\VTKInstall\lib\vtkRenderingContextOpenGL2-7.0.lib;D:\VTK\VTKInstall\lib\vtkRenderingImage-7.0.lib;D:\VTK\VTKInstall\lib\vtkRenderingLOD-7.0.lib;D:\VTK\VTKInstall\lib\vtkRenderingQt-7.0.lib;D:\VTK\VTKInstall\lib\vtkRenderingVolumeOpenGL2-7.0.lib;D:\VTK\VTKInstall\lib\vtkViewsContext2D-7.0.lib;D:\VTK\VTKInstall\lib\vtkViewsQt-7.0.lib;D:\VTK\VTKInstall\lib\vtkDomainsChemistry-7.0.lib;D:\VTK\VTKInstall\lib\vtkFiltersAMR-7.0.lib;D:\VTK\VTKInstall\lib\vtkexoIIc-7.0.lib;D:\VTK\VTKInstall\lib\vtkFiltersParallel-7.0.lib;D:\VTK\VTKInstall\lib\vtkIONetCDF-7.0.lib;D:\VTK\VTKInstall\lib\vtkNetCDF_cxx-7.0.lib;D:\VTK\VTKInstall\lib\vtkNetCDF-7.0.lib;D:\VTK\VTKInstall\lib\vtkhdf5_hl-7.0.lib;D:\VTK\VTKInstall\lib\vtkhdf5-7.0.lib;D:\VTK\VTKInstall\lib\vtkIOXML-7.0.lib;D:\VTK\VTKInstall\lib\vtkIOXMLParser-7.0.lib;D:\VTK\VTKInstall\lib\vtkexpat-7.0.lib;D:\VTK\VTKInstall\lib\vtkParallelCore-7.0.lib;D:\VTK\VTKInstall\lib\vtkIOLegacy-7.0.lib;D:\VTK\VTKInstall\lib\vtkIOGeometry-7.0.lib;D:\VTK\VTKInstall\lib\vtkFiltersTexture-7.0.lib;D:\VTK\VTKInstall\lib\vtkGUISupportQt-7.0.lib;D:\VTK\VTKInstall\lib\vtkRenderingOpenGL2-7.0.lib;D:\VTK\VTKInstall\lib\vtkglew-7.0.lib;D:\VTK\VTKInstall\lib\vtkViewsInfovis-7.0.lib;D:\VTK\VTKInstall\lib\vtkChartsCore-7.0.lib;D:\VTK\VTKInstall\lib\vtkRenderingContext2D-7.0.lib;D:\VTK\VTKInstall\lib\vtkFiltersImaging-7.0.lib;D:\VTK\VTKInstall\lib\vtkInfovisLayout-7.0.lib;D:\VTK\VTKInstall\lib\vtkInfovisCore-7.0.lib;D:\VTK\VTKInstall\lib\vtkViewsCore-7.0.lib;D:\VTK\VTKInstall\lib\vtkInteractionWidgets-7.0.lib;D:\VTK\VTKInstall\lib\vtkImagingHybrid-7.0.lib;D:\VTK\VTKInstall\lib\vtkIOImage-7.0.lib;D:\VTK\VTKInstall\lib\vtkDICOMParser-7.0.lib;D:\VTK\VTKInstall\lib\vtkIOCore-7.0.lib;D:\VTK\VTKInstall\lib\vtkmetaio-7.0.lib;comctl32.lib;wsock32.lib;D:\VTK\VTKInstall\lib\vtkpng-7.0.lib;D:\VTK\VTKInstall\lib\vtktiff-7.0.lib;D:\VTK\VTKInstall\lib\vtkjpeg-7.0.lib;D:\VTK\VTKInstall\lib\vtkFiltersHybrid-7.0.lib;D:\VTK\VTKInstall\lib\vtkImagingGeneral-7.0.lib;D:\VTK\VTKInstall\lib\vtkImagingSources-7.0.lib;D:\VTK\VTKInstall\lib\vtkFiltersModeling-7.0.lib;D:\VTK\VTKInstall\lib\vtkInteractionStyle-7.0.lib;D:\VTK\VTKInstall\lib\vtkRenderingAnnotation-7.0.lib;D:\VTK\VTKInstall\lib\vtkImagingColor-7.0.lib;D:\VTK\VTKInstall\lib\vtkRenderingVolume-7.0.lib;D:\VTK\VTKInstall\lib\vtkRenderingLabel-7.0.lib;D:\VTK\VTKInstall\lib\vtkRenderingFreeType-7.0.lib;D:\VTK\VTKInstall\lib\vtkRenderingCore-7.0.lib;D:\VTK\VTKInstall\lib\vtkCommonColor-7.0.lib;D:\VTK\VTKInstall\lib\vtkFiltersExtraction-7.0.lib;D:\VTK\VTKInstall\lib\vtkFiltersStatistics-7.0.lib;D:\VTK\VTKInstall\lib\vtkalglib-7.0.lib;D:\VTK\VTKInstall\lib\vtkImagingFourier-7.0.lib;D:\VTK\VTKInstall\lib\vtkImagingCore-7.0.lib;D:\VTK\VTKInstall\lib\vtkFiltersGeometry-7.0.lib;D:\VTK\VTKInstall\lib\vtkFiltersSources-7.0.lib;D:\VTK\VTKInstall\lib\vtkFiltersGeneral-7.0.lib;D:\VTK\VTKInstall\lib\vtkFiltersCore-7.0.lib;D:\VTK\VTKInstall\lib\vtkCommonExecutionModel-7.0.lib;D:\VTK\VTKInstall\lib\vtkCommonComputationalGeometry-7.0.lib;D:\VTK\VTKInstall\lib\vtkCommonDataModel-7.0.lib;D:\VTK\VTKInstall\lib\vtkCommonMisc-7.0.lib;D:\VTK\VTKInstall\lib\vtkCommonTransforms-7.0.lib;D:\VTK\VTKInstall\lib\vtkCommonMath-7.0.lib;D:\VTK\VTKInstall\lib\vtkCommonSystem-7.0.lib;D:\VTK\VTKInstall\lib\vtkCommonCore-7.0.lib;D:\VTK\VTKInstall\lib\vtksys-7.0.lib;ws2_32.lib;Psapi.lib;D:\VTK\VTKInstall\lib\vtkfreetype-7.0.lib;D:\VTK\VTKInstall\lib\vtkzlib-7.0.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="GeneratedFiles\Debug\moc_meshsegmentation.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_QVTKModelViewer.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\qrc_meshsegmentation.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+      </PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+      </PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+      </PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+      </PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_meshsegmentation.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_QVTKModelViewer.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="main.cpp" />
+    <ClCompile Include="meshsegmentation.cpp" />
+    <ClCompile Include="QVTKModelViewer.cpp" />
+    <ClCompile Include="vtkConvertToDualGraph.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="meshsegmentation.h">
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(QTDIR)\bin\moc.exe;%(FullPath)</AdditionalInputs>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Moc%27ing meshsegmentation.h...</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">.\GeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp</Outputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">"$(QTDIR)\bin\moc.exe"  "%(FullPath)" -o ".\GeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp"  -DUNICODE -DWIN32 -DWIN64 -DQT_DLL -DQT_CORE_LIB -DQT_GUI_LIB -DQT_WIDGETS_LIB  "-I.\GeneratedFiles" "-I." "-I$(QTDIR)\include" "-I.\GeneratedFiles\$(ConfigurationName)\." "-I$(QTDIR)\include\QtCore" "-I$(QTDIR)\include\QtGui" "-I$(QTDIR)\include\QtWidgets"</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(QTDIR)\bin\moc.exe;%(FullPath)</AdditionalInputs>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Moc%27ing meshsegmentation.h...</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">.\GeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp</Outputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">"$(QTDIR)\bin\moc.exe"  "%(FullPath)" -o ".\GeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp"  -DUNICODE -DWIN32 -DWIN64 -DQT_DLL -DQT_CORE_LIB -DQT_GUI_LIB -DQT_WIDGETS_LIB  "-I.\GeneratedFiles" "-I." "-I$(QTDIR)\include" "-I.\GeneratedFiles\$(ConfigurationName)\." "-ID:\VTK\VTKInstall\include" "-ID:\VTK\VTKInstall\include\vtk-7.0" "-I$(QTDIR)\include\QtCore" "-I$(QTDIR)\include\QtGui" "-I$(QTDIR)\include\QtWidgets" "-I$(QTDIR)\mkspecs\win32-msvc2012"</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(QTDIR)\bin\moc.exe;%(FullPath)</AdditionalInputs>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Moc%27ing meshsegmentation.h...</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">.\GeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp</Outputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">"$(QTDIR)\bin\moc.exe"  "%(FullPath)" -o ".\GeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp"  -DUNICODE -DWIN32 -DWIN64 -DQT_DLL -DQT_NO_DEBUG -DNDEBUG -DQT_CORE_LIB -DQT_GUI_LIB -DQT_WIDGETS_LIB  "-I.\GeneratedFiles" "-I." "-I$(QTDIR)\include" "-I.\GeneratedFiles\$(ConfigurationName)\." "-I$(QTDIR)\include\QtCore" "-I$(QTDIR)\include\QtGui" "-I$(QTDIR)\include\QtWidgets"</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(QTDIR)\bin\moc.exe;%(FullPath)</AdditionalInputs>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Moc%27ing meshsegmentation.h...</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">.\GeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp</Outputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">"$(QTDIR)\bin\moc.exe"  "%(FullPath)" -o ".\GeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp"  -DUNICODE -DWIN32 -DWIN64 -DQT_DLL -DQT_NO_DEBUG -DNDEBUG -DQT_CORE_LIB -DQT_GUI_LIB -DQT_WIDGETS_LIB  "-I.\GeneratedFiles" "-I." "-I$(QTDIR)\include" "-I.\GeneratedFiles\$(ConfigurationName)\." "-ID:\VTK\VTKInstall\include" "-ID:\VTK\VTKInstall\include\vtk-7.0" "-I$(QTDIR)\include\QtCore" "-I$(QTDIR)\include\QtGui" "-I$(QTDIR)\include\QtWidgets" "-I$(QTDIR)\mkspecs\win32-msvc2012"</Command>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="meshsegmentation.ui">
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(QTDIR)\bin\uic.exe;%(AdditionalInputs)</AdditionalInputs>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Uic%27ing %(Identity)...</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">.\GeneratedFiles\ui_%(Filename).h;%(Outputs)</Outputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">"$(QTDIR)\bin\uic.exe" -o ".\GeneratedFiles\ui_%(Filename).h" "%(FullPath)"</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(QTDIR)\bin\uic.exe;%(AdditionalInputs)</AdditionalInputs>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Uic%27ing %(Identity)...</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">.\GeneratedFiles\ui_%(Filename).h;%(Outputs)</Outputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">"$(QTDIR)\bin\uic.exe" -o ".\GeneratedFiles\ui_%(Filename).h" "%(FullPath)"</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(QTDIR)\bin\uic.exe;%(AdditionalInputs)</AdditionalInputs>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Uic%27ing %(Identity)...</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">.\GeneratedFiles\ui_%(Filename).h;%(Outputs)</Outputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">"$(QTDIR)\bin\uic.exe" -o ".\GeneratedFiles\ui_%(Filename).h" "%(FullPath)"</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(QTDIR)\bin\uic.exe;%(AdditionalInputs)</AdditionalInputs>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Uic%27ing %(Identity)...</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">.\GeneratedFiles\ui_%(Filename).h;%(Outputs)</Outputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">"$(QTDIR)\bin\uic.exe" -o ".\GeneratedFiles\ui_%(Filename).h" "%(FullPath)"</Command>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="customInteractorStyle.h" />
+    <ClInclude Include="GeneratedFiles\ui_meshsegmentation.h" />
+    <CustomBuild Include="QVTKModelViewer.h">
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(QTDIR)\bin\moc.exe;%(FullPath)</AdditionalInputs>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Moc%27ing QVTKModelViewer.h...</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">.\GeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp</Outputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">"$(QTDIR)\bin\moc.exe"  "%(FullPath)" -o ".\GeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp"  -DUNICODE -DWIN32 -DWIN64 -DQT_DLL -DQT_CORE_LIB -DQT_GUI_LIB -DQT_WIDGETS_LIB  "-I.\GeneratedFiles" "-I." "-I$(QTDIR)\include" "-I.\GeneratedFiles\$(ConfigurationName)\." "-I$(QTDIR)\include\QtCore" "-I$(QTDIR)\include\QtGui" "-I$(QTDIR)\include\QtWidgets"</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(QTDIR)\bin\moc.exe;%(FullPath)</AdditionalInputs>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Moc%27ing QVTKModelViewer.h...</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">.\GeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp</Outputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">"$(QTDIR)\bin\moc.exe"  "%(FullPath)" -o ".\GeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp"  -DUNICODE -DWIN32 -DWIN64 -DQT_DLL -DQT_CORE_LIB -DQT_GUI_LIB -DQT_WIDGETS_LIB  "-I.\GeneratedFiles" "-I." "-I$(QTDIR)\include" "-I.\GeneratedFiles\$(ConfigurationName)\." "-ID:\VTK\VTKInstall\include" "-ID:\VTK\VTKInstall\include\vtk-7.0" "-I$(QTDIR)\include\QtCore" "-I$(QTDIR)\include\QtGui" "-I$(QTDIR)\include\QtWidgets" "-I$(QTDIR)\mkspecs\win32-msvc2012"</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(QTDIR)\bin\moc.exe;%(FullPath)</AdditionalInputs>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Moc%27ing QVTKModelViewer.h...</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">.\GeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp</Outputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">"$(QTDIR)\bin\moc.exe"  "%(FullPath)" -o ".\GeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp"  -DUNICODE -DWIN32 -DWIN64 -DQT_DLL -DQT_NO_DEBUG -DNDEBUG -DQT_CORE_LIB -DQT_GUI_LIB -DQT_WIDGETS_LIB  "-I.\GeneratedFiles" "-I." "-I$(QTDIR)\include" "-I.\GeneratedFiles\$(ConfigurationName)\." "-I$(QTDIR)\include\QtCore" "-I$(QTDIR)\include\QtGui" "-I$(QTDIR)\include\QtWidgets"</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(QTDIR)\bin\moc.exe;%(FullPath)</AdditionalInputs>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Moc%27ing QVTKModelViewer.h...</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">.\GeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp</Outputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">"$(QTDIR)\bin\moc.exe"  "%(FullPath)" -o ".\GeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp"  -DUNICODE -DWIN32 -DWIN64 -DQT_DLL -DQT_NO_DEBUG -DNDEBUG -DQT_CORE_LIB -DQT_GUI_LIB -DQT_WIDGETS_LIB  "-I.\GeneratedFiles" "-I." "-I$(QTDIR)\include" "-I.\GeneratedFiles\$(ConfigurationName)\." "-ID:\VTK\VTKInstall\include" "-ID:\VTK\VTKInstall\include\vtk-7.0" "-I$(QTDIR)\include\QtCore" "-I$(QTDIR)\include\QtGui" "-I$(QTDIR)\include\QtWidgets" "-I$(QTDIR)\mkspecs\win32-msvc2012"</Command>
+    </CustomBuild>
+    <ClInclude Include="UserInteractionManager.h" />
+    <ClInclude Include="vtkConvertToDualGraph.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="meshsegmentation.qrc">
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(FullPath);%(AdditionalInputs)</AdditionalInputs>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Rcc%27ing %(Identity)...</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">.\GeneratedFiles\qrc_%(Filename).cpp;%(Outputs)</Outputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">"$(QTDIR)\bin\rcc.exe" -name "%(Filename)" -no-compress "%(FullPath)" -o .\GeneratedFiles\qrc_%(Filename).cpp</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">%(FullPath);%(AdditionalInputs)</AdditionalInputs>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Rcc%27ing %(Identity)...</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">.\GeneratedFiles\qrc_%(Filename).cpp;%(Outputs)</Outputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">"$(QTDIR)\bin\rcc.exe" -name "%(Filename)" -no-compress "%(FullPath)" -o .\GeneratedFiles\qrc_%(Filename).cpp</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(FullPath);%(AdditionalInputs)</AdditionalInputs>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Rcc%27ing %(Identity)...</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">.\GeneratedFiles\qrc_%(Filename).cpp;%(Outputs)</Outputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">"$(QTDIR)\bin\rcc.exe" -name "%(Filename)" -no-compress "%(FullPath)" -o .\GeneratedFiles\qrc_%(Filename).cpp</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">%(FullPath);%(AdditionalInputs)</AdditionalInputs>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Rcc%27ing %(Identity)...</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">.\GeneratedFiles\qrc_%(Filename).cpp;%(Outputs)</Outputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">"$(QTDIR)\bin\rcc.exe" -name "%(Filename)" -no-compress "%(FullPath)" -o .\GeneratedFiles\qrc_%(Filename).cpp</Command>
+    </CustomBuild>
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+  <ProjectExtensions>
+    <VisualStudio>
+      <UserProperties UicDir=".\GeneratedFiles" MocDir=".\GeneratedFiles\$(ConfigurationName)" MocOptions="" RccDir=".\GeneratedFiles" lupdateOnBuild="0" lupdateOptions="" lreleaseOptions="" Qt5Version_x0020_x64="Qt5.2.1" />
+    </VisualStudio>
+  </ProjectExtensions>
+</Project>

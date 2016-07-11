@@ -1,3 +1,6 @@
+#include "QVTKModelViewer.h"
+
+#include <vtkAutoInit.h>
 #include <vtkCommand.h>
 #include <vtkSTLReader.h>
 #include <vtkPolyDataMapper.h>
@@ -6,25 +9,19 @@
 #include "customInteractorStyle.h"
 
 #include <iostream>
-#include <stdio.h>
-#include <string>
 
 using namespace std;
 
+VTK_MODULE_INIT(vtkRenderingOpenGL2);
+VTK_MODULE_INIT(vtkInteractionStyle);
+
 vtkStandardNewMacro(customInteractorStyle);
 
-int main() {
-    // get input file name
-    char inputFileName[101];
-    printf("Please input object file name : ");
-    cin >> inputFileName;
-    char prefix[] = "../objects/";
-    char suffix[] = ".stl";
-    strcat(inputFileName, suffix);
-    strcat(prefix, inputFileName);
+QVTKModelViewer::QVTKModelViewer(QWidget *parent) : QVTKWidget(parent) {}
 
+void QVTKModelViewer::RenderModel(string inputFileName) {
     vtkSmartPointer<vtkSTLReader> reader = vtkSmartPointer<vtkSTLReader>::New();
-    reader->SetFileName(prefix);
+    reader->SetFileName(inputFileName.c_str());
     reader->Update();
 
     vtkSmartPointer<vtkPolyData> mesh = reader->GetOutput();
@@ -45,11 +42,13 @@ int main() {
     vtkSmartPointer<vtkActor> actor = vtkSmartPointer<vtkActor>::New();
     actor->SetMapper(mapper);
 
-    vtkSmartPointer<vtkRenderer> renderer = vtkSmartPointer<vtkRenderer>::New();
-    vtkSmartPointer<vtkRenderWindow> renderWindow = vtkSmartPointer<vtkRenderWindow>::New();
-    renderWindow->AddRenderer(renderer);
-    vtkSmartPointer<vtkRenderWindowInteractor> renderWindowInteractor = vtkSmartPointer<vtkRenderWindowInteractor>::New();
-    renderWindowInteractor->SetRenderWindow(renderWindow);
+    renderer = vtkSmartPointer<vtkRenderer>::New();
+    renderer->AddActor(actor);
+    renderer->SetBackground(0.3, 0.6, 0.3);
+
+    this->GetRenderWindow()->AddRenderer(renderer);
+    renderWindowInteractor = this->GetInteractor();
+    renderWindowInteractor->SetRenderWindow(this->GetRenderWindow());
 
     UserInteractionManager *uiManager = new UserInteractionManager(mesh);
 
@@ -58,14 +57,5 @@ int main() {
     style->SetUIManager(uiManager);
 
     renderWindowInteractor->SetInteractorStyle(style);
-
-    renderer->AddActor(actor);
-    renderer->SetBackground(0.3, 0.6, 0.3);
-
-    renderWindow->Render();
-    renderWindow->SetSize(800, 800);
-
-    renderWindowInteractor->Start();
-
-    return EXIT_SUCCESS;
+    renderWindowInteractor->Initialize();
 }
