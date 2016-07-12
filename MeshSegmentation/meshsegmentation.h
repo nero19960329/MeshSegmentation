@@ -38,6 +38,7 @@ private:
     QPushButton *openFileButton;
     QPushButton **colorButtons;
     QPushButton *segmentButton;
+    QPushButton *hideButton;
     QLabel *currentColorLabel;
     UserInteractionManager* uiManager;
 
@@ -45,6 +46,7 @@ private slots:
     void SetModelFileName();
     void SetBrushColor(int k);
     void StartSegmentation();
+    void SetHideMode();
 };
 
 #endif // MESHSEGMENTATION_H

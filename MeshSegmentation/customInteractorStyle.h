@@ -1,51 +1,31 @@
 #pragma once
 
-#include <vtkCellPicker.h>
 #include <vtkInteractorStyleTrackballCamera.h>
 #include <vtkObjectFactory.h>
-#include <vtkSmartPointer.h>
-#include <vtkVersion.h>
 
 #include "UserInteractionManager.h"
-
-using namespace std;
 
 class customInteractorStyle : public vtkInteractorStyleTrackballCamera {
 public:
     UserInteractionManager* uiManager;
+    bool isLeftButtonDown;
     bool isRightButtonDown;
+    bool isHideButtonDown;
+
+private:
+    int lastClusterId;
 
 public:
     static customInteractorStyle* New();
-    customInteractorStyle() {
-        isRightButtonDown = false;
-    }
+    customInteractorStyle();
+
     vtkTypeMacro(customInteractorStyle, vtkInteractorStyleTrackballCamera);
 
-    void SetUIManager(UserInteractionManager* manager) {
-        uiManager = manager;
-    }
+    void SetUIManager(UserInteractionManager* manager);
 
-    virtual void OnRightButtonDown() {
-        isRightButtonDown = true;
-    }
-
-    virtual void OnMouseMove() {
-        if (!isRightButtonDown) {
-            vtkInteractorStyleTrackballCamera::OnMouseMove();
-            return;
-        }
-
-        int *pos = this->GetInteractor()->GetEventPosition();
-
-        vtkSmartPointer<vtkCellPicker> picker = vtkSmartPointer<vtkCellPicker>::New();
-        picker->SetTolerance(0.00001);
-        picker->Pick(pos[0], pos[1], 0, this->GetDefaultRenderer());
-
-        uiManager->Selecting(picker, this->Interactor);
-    }
-
-    virtual void OnRightButtonUp() {
-        isRightButtonDown = false;
-    }
+    virtual void OnLeftButtonDown();
+    virtual void OnLeftButtonUp();
+    virtual void OnRightButtonDown();
+    virtual void OnRightButtonUp();
+    virtual void OnMouseMove();
 };

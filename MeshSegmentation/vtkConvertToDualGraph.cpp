@@ -160,8 +160,8 @@ int vtkConvertToDualGraph::RequestData(vtkInformation *vtkNotUsed(request), vtkI
             }
         }
 
-        for (list<vtkIdType>::iterator it = neighbors.begin(); it != neighbors.end(); ++it) {
-            g->AddEdge(i, *it);
+        for (auto neighbor : neighbors) {
+            g->AddEdge(i, neighbor);
         }
     }
 

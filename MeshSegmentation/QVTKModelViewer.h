@@ -8,6 +8,7 @@
 
 #include <string>
 
+#include "customInteractorStyle.h"
 #include "UserInteractionManager.h"
 
 class QVTKModelViewer : public QVTKWidget {
@@ -16,6 +17,7 @@ class QVTKModelViewer : public QVTKWidget {
 public:
     vtkSmartPointer<vtkRenderer> renderer;
     vtkSmartPointer<vtkRenderWindowInteractor> renderWindowInteractor;
+    vtkSmartPointer<customInteractorStyle> style;
 
 public:
     explicit QVTKModelViewer(QWidget *parent = 0);

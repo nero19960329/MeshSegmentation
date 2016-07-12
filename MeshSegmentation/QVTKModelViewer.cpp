@@ -6,8 +6,6 @@
 #include <vtkPolyDataMapper.h>
 #include <vtkIdList.h>
 
-#include "customInteractorStyle.h"
-
 #include <iostream>
 
 using namespace std;
@@ -52,7 +50,7 @@ UserInteractionManager* QVTKModelViewer::RenderModel(string inputFileName) {
 
     UserInteractionManager *uiManager = new UserInteractionManager(mesh);
 
-    vtkSmartPointer<customInteractorStyle> style = vtkSmartPointer<customInteractorStyle>::New();
+    style = vtkSmartPointer<customInteractorStyle>::New();
     style->SetDefaultRenderer(renderer);
     style->SetUIManager(uiManager);
 

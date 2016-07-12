@@ -35,6 +35,7 @@
 #include <unordered_map>
 #include <vector>
 
+#include "Utils.h"
 #include "vtkConvertToDualGraph.h"
 
 using namespace std;
@@ -219,49 +220,41 @@ public:
         }
     }
 
-    unsigned char* HSVtoRGB(double h, double s, double v) {
-        h *= 360.0;
+    int HightlightCluster(const vtkSmartPointer<vtkCellPicker>& picker, const vtkSmartPointer<vtkRenderWindowInteractor>& interactor, int lastClusterId) {
+        vtkIdType pickId = picker->GetCellId();
+        if (pickId != -1) {
+            unsigned char color[3] = { 0, 0, 0 };
+            faceColors->GetTupleValue(pickId, color);
 
-        int tmp = floor(h / 60);
-        double f = h / 60 - tmp;
-        double p = v * (1 - s);
-        double q = v * (1 - f * s);
-        double t = v * (1 - (1 - f) * s);
+            if (lastClusterId >= 0) {
+                if (equals(color, clusterColors[lastClusterId], 1.2)) {
+                    return lastClusterId;
+                } else {
+                    highlightFace(interactor, clusterFaceIds[lastClusterId], clusterColors[lastClusterId]);
+                }
+            }
 
-        double* tmpArray = new double[3];
-        unsigned char* res = new unsigned char[3];
+            int clusterId = -1;
+            for (int i = 0; i < clusterCnt; ++i) {
+                if (equals(color, clusterColors[i])) {
+                    clusterId = i;
+                    break;
+                }
+            }
 
-        if (tmp == 0) {
-            tmpArray[0] = v;
-            tmpArray[1] = t;
-            tmpArray[2] = p;
-        } else if (tmp == 1) {
-            tmpArray[0] = q;
-            tmpArray[1] = v;
-            tmpArray[2] = p;
-        } else if (tmp == 2) {
-            tmpArray[0] = p;
-            tmpArray[1] = v;
-            tmpArray[2] = t;
-        } else if (tmp == 3) {
-            tmpArray[0] = p;
-            tmpArray[1] = q;
-            tmpArray[2] = v;
-        } else if (tmp == 4) {
-            tmpArray[0] = t;
-            tmpArray[1] = p;
-            tmpArray[2] = v;
-        } else {
-            tmpArray[0] = v;
-            tmpArray[1] = p;
-            tmpArray[2] = q;
+            if (clusterId == -1) {
+                return clusterId;
+            }
+
+            unsigned char tmpColor[3] = { (unsigned char) color[0] * 1.2, (unsigned char) color[1] * 1.2, (unsigned char) color[2] * 1.2 };
+            highlightFace(interactor, clusterFaceIds[clusterId], tmpColor);
+
+            return clusterId;
+        } else if (lastClusterId >= 0) {
+            highlightFace(interactor, clusterFaceIds[lastClusterId], clusterColors[lastClusterId]);
         }
 
-        res[0] = (unsigned char)(tmpArray[0] * 256);
-        res[1] = (unsigned char)(tmpArray[1] * 256);
-        res[2] = (unsigned char)(tmpArray[2] * 256);
-
-        return res;
+        return -1;
     }
 
     double* getDijkstraTable(const vtkSmartPointer<vtkDoubleArray>& meshDis, int faceId, const vtkSmartPointer<vtkMutableUndirectedGraph>& g) {
