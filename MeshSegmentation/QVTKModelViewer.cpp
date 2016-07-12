@@ -19,7 +19,7 @@ vtkStandardNewMacro(customInteractorStyle);
 
 QVTKModelViewer::QVTKModelViewer(QWidget *parent) : QVTKWidget(parent) {}
 
-void QVTKModelViewer::RenderModel(string inputFileName) {
+UserInteractionManager* QVTKModelViewer::RenderModel(string inputFileName) {
     vtkSmartPointer<vtkSTLReader> reader = vtkSmartPointer<vtkSTLReader>::New();
     reader->SetFileName(inputFileName.c_str());
     reader->Update();
@@ -58,4 +58,6 @@ void QVTKModelViewer::RenderModel(string inputFileName) {
 
     renderWindowInteractor->SetInteractorStyle(style);
     renderWindowInteractor->Initialize();
+
+    return uiManager;
 }

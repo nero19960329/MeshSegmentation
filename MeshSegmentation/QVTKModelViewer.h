@@ -8,6 +8,8 @@
 
 #include <string>
 
+#include "UserInteractionManager.h"
+
 class QVTKModelViewer : public QVTKWidget {
     Q_OBJECT
 
@@ -18,5 +20,5 @@ public:
 public:
     explicit QVTKModelViewer(QWidget *parent = 0);
 
-    void RenderModel(std::string inputFileName);
+    UserInteractionManager* RenderModel(std::string inputFileName);
 };

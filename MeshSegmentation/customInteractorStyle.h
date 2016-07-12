@@ -6,18 +6,9 @@
 #include <vtkSmartPointer.h>
 #include <vtkVersion.h>
 
-#include <thread>
-
 #include "UserInteractionManager.h"
 
 using namespace std;
-
-class threadRun {
-public:
-    void operator() (UserInteractionManager* uiManager, const vtkSmartPointer<vtkRenderWindowInteractor>& interactor) {
-        uiManager->StartSegmentation(interactor);
-    }
-};
 
 class customInteractorStyle : public vtkInteractorStyleTrackballCamera {
 public:
@@ -33,15 +24,6 @@ public:
 
     void SetUIManager(UserInteractionManager* manager) {
         uiManager = manager;
-    }
-
-    virtual void OnLeftButtonDown() {
-        vtkInteractorStyleTrackballCamera::OnLeftButtonDown();
-    }
-
-    virtual void OnMiddleButtonDown() {
-        uiManager->SelectionDone();
-        vtkInteractorStyleTrackballCamera::OnMiddleButtonDown();
     }
 
     virtual void OnRightButtonDown() {
@@ -65,18 +47,5 @@ public:
 
     virtual void OnRightButtonUp() {
         isRightButtonDown = false;
-    }
-
-    virtual void OnKeyPress() {
-        vtkRenderWindowInteractor *rwi = this->Interactor;
-        string key = rwi->GetKeySym();
-
-        if (key == "Return") {
-            //threadRun r;
-            //thread t(ref(r), uiManager, this->Interactor);
-            uiManager->StartSegmentation(this->Interactor);
-        }
-
-        vtkInteractorStyleTrackballCamera::OnKeyPress();
     }
 };

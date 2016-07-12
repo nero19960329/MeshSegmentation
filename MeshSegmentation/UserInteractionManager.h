@@ -31,7 +31,9 @@
 #include <algorithm>
 #include <list>
 #include <set>
+#include <stdio.h>
 #include <unordered_map>
+#include <vector>
 
 #include "vtkConvertToDualGraph.h"
 
@@ -48,16 +50,18 @@ public:
     }
 };
 
+enum ClusterStatus { STATUS_NONE, STATUS_ACTIVE, STATUS_INACTIVE };
+
 class UserInteractionManager {
 private:
     vtkSmartPointer<vtkPolyData> Data;
     vtkIdType numberOfFaces;
-
-    double h, s, v;
-    int clusterOkCnt, clusterCnt;
+    
+    int clusterCnt, currentCluster;
     unordered_map<int, bool> idHash;
-    list<unsigned char*> clusterColors;
-    list< vtkSmartPointer<vtkIdTypeArray> > clusterFaceIds;
+    int *clusterStatuses;
+    unsigned char **clusterColors;
+    vtkSmartPointer<vtkIdTypeArray> *clusterFaceIds;
     vtkSmartPointer<vtkUnsignedCharArray> faceColors;
 
 public:
@@ -68,18 +72,27 @@ public:
 
         numberOfFaces = Data->GetNumberOfCells();
 
-        clusterOkCnt = 0;
-        clusterCnt = 0;
+        clusterCnt = 16;
+        currentCluster = 0;
         idHash = unordered_map<int, bool>();
 
-        vtkMath::RandomSeed((unsigned)time(NULL));
-        h = vtkMath::Random(0.0, 1.0);
-        printf("h = %lf\n", h);
-
+        double h, s, v;
+        h = goldenRatio * 8 - 4;
         s = 0.7;
         v = 0.8;
-        unsigned char* clusterColor = HSVtoRGB(h, s, v);
-        clusterColors.push_front(clusterColor);
+
+        clusterColors = new unsigned char*[clusterCnt];
+        for (int i = 0; i < clusterCnt; ++i) {
+            unsigned char* clusterColor = HSVtoRGB(h, s, v);
+            clusterColors[i] = clusterColor;
+            h += goldenRatio;
+            h = h >= 1 ? h - 1 : h;
+        }
+
+        clusterStatuses = new int[clusterCnt];
+        for (int i = 0; i < clusterCnt; ++i) {
+            clusterStatuses[i] = STATUS_NONE;
+        }
 
         unsigned char white[3] = { 255, 255, 255 };
         faceColors = vtkSmartPointer<vtkUnsignedCharArray>::New();
@@ -91,13 +104,20 @@ public:
         }
         Data->GetCellData()->SetScalars(faceColors);
 
-        vtkSmartPointer<vtkIdTypeArray> clusterFaceId = vtkSmartPointer<vtkIdTypeArray>::New();
-        clusterFaceId->SetNumberOfComponents(1);
-        clusterFaceIds.push_front(clusterFaceId);
+        clusterFaceIds = new vtkSmartPointer<vtkIdTypeArray>[clusterCnt];
+        for (int i = 0; i < clusterCnt; ++i) {
+            vtkSmartPointer<vtkIdTypeArray> clusterFaceId = vtkSmartPointer<vtkIdTypeArray>::New();
+            clusterFaceId->SetNumberOfComponents(1);
+            clusterFaceIds[i] = clusterFaceId;
+        }
     }
 
-    void test() {
-        printf("threadTest\n");
+    unsigned char **GetColors() {
+        return clusterColors;
+    }
+
+    void SetCurrentCluster(int k) {
+        currentCluster = k;
     }
 
     void StartSegmentation(const vtkSmartPointer<vtkRenderWindowInteractor>& interactor) {
@@ -118,208 +138,75 @@ public:
 
         // start clustering
         vtkSmartPointer<vtkDoubleArray> meshDis = vtkDoubleArray::SafeDownCast(g->GetEdgeData()->GetArray("Weights"));
-
-        list<vtkIdType> lastCenterIds;
         unordered_map<int, double*> distances;
-        int iterationCnt = 0;
+        vtkIdType* clusterCenterIds = new vtkIdType[clusterCnt];
 
-        for (vtkIdType i = 0; i <= clusterCnt; ++i) {
-            lastCenterIds.push_back(-1);
+        // get center of each cluster
+        for (vtkIdType i = 0; i < clusterCnt; ++i) {
+            if (clusterStatuses[i] != STATUS_ACTIVE) {
+                clusterCenterIds[i] = -1;
+                continue;
+            }
+
+            vtkIdType tmpId;
+            getCenterFaceId(clusterFaceIds[i], centers, tmpId);
+            clusterCenterIds[i] = tmpId;
+
+            if (!distances[tmpId]) {
+                distances[tmpId] = getDijkstraTable(meshDis, tmpId, g);
+            }
         }
 
-        list<double> varianceList;
-        bool periodFlag = false;
-        double minVariance = DBL_MAX;
-        double* evaluations = new double[clusterCnt + 1];
-        double **possibilities = new double*[numberOfFaces];
-        while (iterationCnt < 1) {
-            printf("Clutering --- iteration %d . . .\n", (iterationCnt + 1));
-
-            list<vtkIdType> clusterCenterIds;
-
-            // get center of each cluster
-            list< vtkSmartPointer<vtkIdTypeArray> >::iterator faceIt = clusterFaceIds.begin();
-            list<vtkIdType>::iterator lastIt = lastCenterIds.begin();
-            bool continueFlag = false;
-
-            for (vtkIdType i = 0; i <= clusterCnt; ++i) {
-                vtkIdType tmpId;
-                getCenterFaceId(*faceIt, centers, tmpId);
-
-                if (tmpId != *lastIt) {
-                    continueFlag = true;
-                }
-                *lastIt = tmpId;
-
-                clusterCenterIds.push_back(tmpId);
-
-                if (!distances[tmpId]) {
-                    distances[tmpId] = getDijkstraTable(meshDis, tmpId, g);
+        vector<vtkIdType> *minDisIds = new vector<vtkIdType>[clusterCnt];
+        for (vtkIdType i = 0; i < numberOfFaces; ++i) {
+            double minDis = DBL_MAX;
+            vtkIdType minDisId;
+            for (int j = 0; j < clusterCnt; ++j) {
+                if (clusterStatuses[j] != STATUS_ACTIVE) {
+                    continue;
                 }
 
-                *faceIt = vtkSmartPointer<vtkIdTypeArray>::New();
-
-                ++faceIt;
-                ++lastIt;
-            }
-
-            if (!continueFlag) {
-                break;
-            }
-
-            for (int i = 0; i <= clusterCnt; ++i) {
-                evaluations[i] = 0.0;
-            }
-
-            list<vtkIdType> *minDisIds = new list<vtkIdType>[clusterCenterIds.size()];
-            for (vtkIdType i = 0; i < numberOfFaces; ++i) {
-                double minDis = DBL_MAX;
-                vtkIdType minDisId;
-                int clusterId = 0;
-                for (auto centerId : clusterCenterIds) {
-                    if (distances[centerId][i] < minDis) {
-                        minDis = distances[centerId][i];
-                        minDisId = clusterId;
-                    }
-                    ++clusterId;
-                }
-                if (minDis == DBL_MAX) {
-                    printf("error vtkIdType : %d\n", (int)i);
-                    minDis = 0.0;
-                } else {
-                    minDisIds[minDisId].push_back(i);
-                }
-                evaluations[minDisId] += minDis;
-            }
-
-            printf("evaluations : \n");
-            double avgEvaluation = 0.0;
-            for (int i = 0; i <= clusterCnt; ++i) {
-                evaluations[i] /= minDisIds[i].size();
-                avgEvaluation += evaluations[i];
-                printf("cluster %d --- size : %d, average dis : %lf\n", i, minDisIds[i].size(), evaluations[i]);
-            }
-            avgEvaluation /= (clusterCnt + 1);
-
-            double varEvaluation = 0.0;
-            for (int i = 0; i <= clusterCnt; ++i) {
-                varEvaluation += (evaluations[i] - avgEvaluation) * (evaluations[i] - avgEvaluation);
-            }
-            varEvaluation /= (clusterCnt + 1);
-            printf("variance : %lf\n", varEvaluation);
-
-            if (!periodFlag) {
-                for (list<double>::iterator listIt = varianceList.begin(); listIt != varianceList.end(); ++listIt) {
-                    if (varEvaluation == *listIt) {
-                        periodFlag = true;
-                        while (listIt != varianceList.end()) {
-                            if (*listIt < minVariance) {
-                                minVariance = *listIt;
-                            }
-                            ++listIt;
-                        }
-                        --listIt;
-                    }
-                }
-
-                if (!periodFlag) {
-                    varianceList.push_back(varEvaluation);
+                if (distances[clusterCenterIds[j]][i] < minDis) {
+                    minDis = distances[clusterCenterIds[j]][i];
+                    minDisId = j;
                 }
             }
 
-            /* ========================================================= */
-//             for (vtkIdType i = 0; i < numberOfFaces; ++i) {
-//                 possibilities[i] = new double[clusterCnt + 1];
-//                 double tmp = 0;
-// 
-//                 list<vtkIdType>::iterator centerIt = clusterCenterIds.begin();
-//                 for (vtkIdType j = 0; j <= clusterCnt; ++j) {
-//                     tmp += (1.0 / distances[*centerIt][i]);
-//                     ++centerIt;
-//                 }
-// 
-//                 centerIt = clusterCenterIds.begin();
-//                 for (vtkIdType j = 0; j <= clusterCnt; ++j) {
-//                     if (distances[*centerIt][i] == 0.0) {
-//                         possibilities[i][j] = 1.0;
-//                     } else {
-//                         possibilities[i][j] = 1.0 / (distances[*centerIt][i] * tmp);
-//                     }
-//                     ++centerIt;
-//                 }
-// 
-//                 double tmpColor[3] = { 0, 0, 0 };
-//                 double ratio = 0.2;
-//                 list<unsigned char*>::iterator colorIt = clusterColors.begin();
-//                 for (vtkIdType j = 0; j <= clusterCnt; ++j) {
-//                     if (possibilities[i][j] > 0.5 * (1 + ratio)) {
-//                         tmpColor[0] = (*colorIt)[0];
-//                         tmpColor[1] = (*colorIt)[1];
-//                         tmpColor[2] = (*colorIt)[2];
-//                     }
-// //                     tmpColor[0] += possibilities[i][j] * (*colorIt)[0];
-// //                     tmpColor[1] += possibilities[i][j] * (*colorIt)[1];
-// //                     tmpColor[2] += possibilities[i][j] * (*colorIt)[2];
-//                     ++colorIt;
-//                 }
-// 
-//                 unsigned char color[3] = { (unsigned char) tmpColor[0], (unsigned char) tmpColor[1], (unsigned char) tmpColor[2] };
-//                 faceColors->SetTupleValue(i, color);
-//             }
-//             Data->GetCellData()->RemoveArray("Colors");
-//             Data->GetCellData()->SetScalars(faceColors);
-//             interactor->GetRenderWindow()->Render();
-            /* ========================================================= */
+            if (minDis == DBL_MAX) {
+                printf("error vtkIdType : %d\n", (int)i);
+                minDis = 0.0;
+            } else {
+                minDisIds[minDisId].push_back(i);
+            }
+        }
 
-            list< vtkSmartPointer<vtkIdTypeArray> >::iterator faceIdIt = clusterFaceIds.begin();
-            for (vtkIdType i = 0; i <= clusterCnt; ++i) {
-                for (list< vtkIdType >::iterator it = minDisIds[i].begin(); it != minDisIds[i].end(); ++it) {
-                    (*faceIdIt)->InsertNextValue(*it);
-                }
-                ++faceIdIt;
+        for (int i = 0; i < clusterCnt; ++i) {
+            if (clusterStatuses[i] != STATUS_ACTIVE) {
+                continue;
             }
 
-            // re-render clusters
-            list<unsigned char*>::iterator colorIt;
-            list< vtkSmartPointer<vtkIdTypeArray> >::iterator idsIt;
-            colorIt = clusterColors.begin();
-            idsIt = clusterFaceIds.begin();
+            for (auto faceId : minDisIds[i]) {
+                clusterFaceIds[i]->InsertNextValue(faceId);
+            }
+        }
 
-            for (vtkIdType i = 0; i <= clusterCnt; ++i) {
-                highlightFace(interactor, *idsIt, *colorIt);
-                ++idsIt;
-                ++colorIt;
+        // re-render clusters
+        for (int i = 0; i < clusterCnt; ++i) {
+            if (clusterStatuses[i] != STATUS_ACTIVE) {
+                continue;
             }
 
-            if (periodFlag) {
-                if (varEvaluation == minVariance) {
-                    break;
-                }
-            }
-
-            ++iterationCnt;
+            highlightFace(interactor, clusterFaceIds[i], clusterColors[i]);
         }
 
         printf("done!\n");
     }
 
-    void SelectionDone() {
-        ++clusterCnt;
-
-        h += goldenRatio;
-        h = h >= 1 ? h - 1 : h;
-        
-        unsigned char* clusterColor = HSVtoRGB(h, s, v);
-        clusterColors.push_back(clusterColor);
-
-        vtkSmartPointer<vtkIdTypeArray> clusterFaceId = vtkSmartPointer<vtkIdTypeArray>::New();
-        clusterFaceId->SetNumberOfComponents(1);
-        clusterFaceIds.push_back(clusterFaceId);
-    }
-
     void Selecting(const vtkSmartPointer<vtkCellPicker>& picker, const vtkSmartPointer<vtkRenderWindowInteractor>& interactor) {
-        vtkSmartPointer<vtkIdTypeArray>& ids = *(--clusterFaceIds.end());
-        unsigned char* selectedColor = *(--clusterColors.end());
+        clusterStatuses[currentCluster] = STATUS_ACTIVE;
+
+        vtkSmartPointer<vtkIdTypeArray>& ids = clusterFaceIds[currentCluster];
+        unsigned char* selectedColor = clusterColors[currentCluster];
 
         vtkIdType pickId = picker->GetCellId();
         if (pickId != -1) {
@@ -452,11 +339,10 @@ public:
             center[1] += centers->GetTuple(*it)[1];
             center[2] += centers->GetTuple(*it)[2];
         }
-        //cout << "size : " << ids->GetNumberOfTuples() << ", ";
+
         center[0] /= ids->GetNumberOfTuples();
         center[1] /= ids->GetNumberOfTuples();
         center[2] /= ids->GetNumberOfTuples();
-        //printf("center : (%lf, %lf, %lf)\n", center[0], center[1], center[2]);
 
         double minDis = DBL_MAX;
         for (vtkIdType i = 0; i < centers->GetNumberOfTuples(); ++i) {
@@ -466,7 +352,5 @@ public:
                 centerId = i;
             }
         }
-
-        //printf("nearest --- id : %d, center : (%lf, %lf, %lf)\n", centerId, centers->GetTuple(centerId)[0], centers->GetTuple(centerId)[1],centers->GetTuple(centerId)[2]);
     }
 };

@@ -27,15 +27,24 @@ public:
 private:
     Ui::MeshSegmentationClass ui;
 
+    int colorNum;
     int modelViewerLen;
     QString path;
+    unsigned char **colors;
+
     QWidget *widget;
     QVTKModelViewer *modelViewer;
     QGridLayout *mainLayout;
     QPushButton *openFileButton;
+    QPushButton **colorButtons;
+    QPushButton *segmentButton;
+    QLabel *currentColorLabel;
+    UserInteractionManager* uiManager;
 
 private slots:
     void SetModelFileName();
+    void SetBrushColor(int k);
+    void StartSegmentation();
 };
 
 #endif // MESHSEGMENTATION_H
