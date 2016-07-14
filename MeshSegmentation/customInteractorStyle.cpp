@@ -16,11 +16,17 @@ void customInteractorStyle::SetUIManager(UserInteractionManager* manager) {
 
 void customInteractorStyle::OnLeftButtonDown() {
     isLeftButtonDown = true;
+
     vtkInteractorStyleTrackballCamera::OnLeftButtonDown();
 }
 
 void customInteractorStyle::OnLeftButtonUp() {
     isLeftButtonDown = false;
+
+    if (isHideButtonDown) {
+        uiManager->ResetCluster(this->Interactor, lastClusterId);
+    }
+
     vtkInteractorStyleTrackballCamera::OnLeftButtonUp();
 }
 

@@ -10,6 +10,7 @@
 #include <vtkDoubleArray.h>
 #include <vtkExtractSelection.h>
 #include <vtkInEdgeIterator.h>
+#include <vtkIntArray.h>
 #include <vtkMath.h>
 #include <vtkMutableUndirectedGraph.h>
 #include <vtkPolyData.h>
@@ -51,7 +52,7 @@ public:
     }
 };
 
-enum ClusterStatus { STATUS_NONE, STATUS_ACTIVE, STATUS_INACTIVE };
+enum ClusterStatus { STATUS_NONE, STATUS_SELECT, STATUS_ACTIVE };
 
 class UserInteractionManager {
 private:
@@ -59,11 +60,12 @@ private:
     vtkIdType numberOfFaces;
     
     int clusterCnt, currentCluster;
-    unordered_map<int, bool> idHash;
     int *clusterStatuses;
     unsigned char **clusterColors;
     vtkSmartPointer<vtkIdTypeArray> *clusterFaceIds;
     vtkSmartPointer<vtkUnsignedCharArray> faceColors;
+    vtkSmartPointer<vtkMutableUndirectedGraph> completeGraph, g;
+    vtkSmartPointer<vtkDoubleArray> centers;
 
 public:
     UserInteractionManager() {}
@@ -75,7 +77,8 @@ public:
 
         clusterCnt = 16;
         currentCluster = 0;
-        idHash = unordered_map<int, bool>();
+        completeGraph = NULL;
+        g = NULL;
 
         double h, s, v;
         h = goldenRatio * 8 - 4;
@@ -95,9 +98,9 @@ public:
             clusterStatuses[i] = STATUS_NONE;
         }
 
-        unsigned char white[3] = { 255, 255, 255 };
+        unsigned char white[4] = { 255, 255, 255, 255 };
         faceColors = vtkSmartPointer<vtkUnsignedCharArray>::New();
-        faceColors->SetNumberOfComponents(3);
+        faceColors->SetNumberOfComponents(4);
         faceColors->SetNumberOfTuples(numberOfFaces);
         faceColors->SetName("Colors");
         for (vtkIdType i = 0; i < numberOfFaces; ++i) {
@@ -126,25 +129,53 @@ public:
         vtkSmartPointer<vtkPoints> points = Data->GetPoints();
         vtkSmartPointer<vtkDataArray> dataArray = points->GetData();
 
-        vtkSmartPointer<vtkDoubleArray> centers, areas;
-        vtkSmartPointer<vtkConvertToDualGraph> convert = vtkSmartPointer<vtkConvertToDualGraph>::New();
-        convert->SetInputData(Data);
-        convert->Update();
+        if (!completeGraph) {
+            vtkSmartPointer<vtkConvertToDualGraph> convert = vtkSmartPointer<vtkConvertToDualGraph>::New();
+            convert->SetInputData(Data);
+            convert->Update();
 
-        vtkMutableUndirectedGraph *g = vtkMutableUndirectedGraph::SafeDownCast(convert->GetOutput());
-        centers = vtkDoubleArray::SafeDownCast(g->GetVertexData()->GetArray("Centers"));
-        areas = vtkDoubleArray::SafeDownCast(g->GetVertexData()->GetArray("Areas"));
+            completeGraph = vtkSmartPointer<vtkMutableUndirectedGraph>::New();
+            completeGraph->ShallowCopy(vtkMutableUndirectedGraph::SafeDownCast(convert->GetOutput()));
+            centers = vtkDoubleArray::SafeDownCast(completeGraph->GetVertexData()->GetArray("Centers"));
+
+            vtkSmartPointer<vtkIntArray> faceStatuses = vtkSmartPointer<vtkIntArray>::New();
+            faceStatuses->SetNumberOfComponents(1);
+            faceStatuses->SetNumberOfValues(numberOfFaces);
+            faceStatuses->SetName("Statuses");
+            for (vtkIdType i = 0; i < numberOfFaces; ++i) {
+                faceStatuses->SetValue(i, i);
+            }
+            completeGraph->GetVertexData()->AddArray(faceStatuses);
+
+            g = completeGraph;
+        } else {
+            numberOfFaces = completeGraph->GetNumberOfVertices();
+            vtkSmartPointer<vtkIntArray> faceStatuses = vtkIntArray::SafeDownCast(g->GetVertexData()->GetArray("Statuses"));
+
+            vtkSmartPointer<vtkIdTypeArray> removeVertices = vtkIdTypeArray::New();
+            removeVertices->SetNumberOfComponents(1);
+            for (vtkIdType i = 0; i < numberOfFaces; ++i) {
+                if (faceStatuses->GetValue(i) < 0) {
+                    removeVertices->InsertNextValue(i);
+                }
+            }
+
+            g->RemoveVertices(removeVertices);
+        }
+
         cout << "vertex number : " << g->GetNumberOfVertices() << endl;
         cout << "edge number : " << g->GetNumberOfEdges() << endl;
+        numberOfFaces = g->GetNumberOfVertices();
 
         // start clustering
         vtkSmartPointer<vtkDoubleArray> meshDis = vtkDoubleArray::SafeDownCast(g->GetEdgeData()->GetArray("Weights"));
         unordered_map<int, double*> distances;
         vtkIdType* clusterCenterIds = new vtkIdType[clusterCnt];
 
+        vtkSmartPointer<vtkIntArray> faceStatuses = vtkIntArray::SafeDownCast(g->GetVertexData()->GetArray("Statuses"));
         // get center of each cluster
         for (vtkIdType i = 0; i < clusterCnt; ++i) {
-            if (clusterStatuses[i] != STATUS_ACTIVE) {
+            if (clusterStatuses[i] != STATUS_SELECT) {
                 clusterCenterIds[i] = -1;
                 continue;
             }
@@ -153,9 +184,7 @@ public:
             getCenterFaceId(clusterFaceIds[i], centers, tmpId);
             clusterCenterIds[i] = tmpId;
 
-            if (!distances[tmpId]) {
-                distances[tmpId] = getDijkstraTable(meshDis, tmpId, g);
-            }
+            distances[tmpId] = getDijkstraTable(meshDis, tmpId, g);
         }
 
         vector<vtkIdType> *minDisIds = new vector<vtkIdType>[clusterCnt];
@@ -163,7 +192,7 @@ public:
             double minDis = DBL_MAX;
             vtkIdType minDisId;
             for (int j = 0; j < clusterCnt; ++j) {
-                if (clusterStatuses[j] != STATUS_ACTIVE) {
+                if (clusterStatuses[j] != STATUS_SELECT) {
                     continue;
                 }
 
@@ -173,60 +202,70 @@ public:
                 }
             }
 
-            if (minDis == DBL_MAX) {
-                printf("error vtkIdType : %d\n", (int)i);
-                minDis = 0.0;
-            } else {
+            if (minDis != DBL_MAX) {
                 minDisIds[minDisId].push_back(i);
             }
         }
 
         for (int i = 0; i < clusterCnt; ++i) {
-            if (clusterStatuses[i] != STATUS_ACTIVE) {
+            if (clusterStatuses[i] != STATUS_SELECT) {
                 continue;
             }
 
+            vtkSmartPointer<vtkIdTypeArray> clusterFaceId = vtkSmartPointer<vtkIdTypeArray>::New();
+            clusterFaceId->SetNumberOfComponents(1);
+            clusterFaceIds[i] = clusterFaceId;
             for (auto faceId : minDisIds[i]) {
-                clusterFaceIds[i]->InsertNextValue(faceId);
+                clusterFaceIds[i]->InsertNextValue(faceStatuses->GetValue(faceId));
             }
         }
 
         // re-render clusters
         for (int i = 0; i < clusterCnt; ++i) {
-            if (clusterStatuses[i] != STATUS_ACTIVE) {
+            if (clusterStatuses[i] != STATUS_SELECT) {
                 continue;
             }
 
+            clusterStatuses[i] = STATUS_ACTIVE;
             highlightFace(interactor, clusterFaceIds[i], clusterColors[i]);
+        }
+
+        g = vtkSmartPointer<vtkMutableUndirectedGraph>::New();
+        g->DeepCopy(completeGraph);
+        faceStatuses = vtkIntArray::SafeDownCast(g->GetVertexData()->GetArray("Statuses"));
+        numberOfFaces = g->GetNumberOfVertices();
+
+        for (vtkIdType i = 0; i < numberOfFaces; ++i) {
+            faceStatuses->SetValue(i, -1);
         }
 
         printf("done!\n");
     }
 
     void Selecting(const vtkSmartPointer<vtkCellPicker>& picker, const vtkSmartPointer<vtkRenderWindowInteractor>& interactor) {
-        clusterStatuses[currentCluster] = STATUS_ACTIVE;
-
         vtkSmartPointer<vtkIdTypeArray>& ids = clusterFaceIds[currentCluster];
         unsigned char* selectedColor = clusterColors[currentCluster];
 
         vtkIdType pickId = picker->GetCellId();
         if (pickId != -1) {
-            if (!idHash[pickId]) {
-                ids->InsertNextValue(pickId);
-                idHash[pickId] = true;
-            }
+            unsigned char color[4] = { 255, 255, 255, 255 };
+            faceColors->GetTupleValue(pickId, color);
 
-            highlightFace(interactor, ids, selectedColor);
+            if (color[0] == 255 && color[1] == 255 && color[2] == 255) {
+                clusterStatuses[currentCluster] = STATUS_SELECT;
+                ids->InsertNextValue(pickId);
+                highlightFace(interactor, ids, selectedColor);
+            }
         }
     }
 
     int HightlightCluster(const vtkSmartPointer<vtkCellPicker>& picker, const vtkSmartPointer<vtkRenderWindowInteractor>& interactor, int lastClusterId) {
         vtkIdType pickId = picker->GetCellId();
         if (pickId != -1) {
-            unsigned char color[3] = { 0, 0, 0 };
+            unsigned char color[4] = { 255, 255, 255, 255 };
             faceColors->GetTupleValue(pickId, color);
 
-            if (lastClusterId >= 0) {
+            if (lastClusterId >= 0 && clusterStatuses[lastClusterId] == STATUS_ACTIVE) {
                 if (equals(color, clusterColors[lastClusterId], 1.2)) {
                     return lastClusterId;
                 } else {
@@ -242,19 +281,37 @@ public:
                 }
             }
 
-            if (clusterId == -1) {
-                return clusterId;
+            if (clusterId == -1 || clusterStatuses[clusterId] != STATUS_ACTIVE) {
+                return -1;
             }
 
-            unsigned char tmpColor[3] = { (unsigned char) color[0] * 1.2, (unsigned char) color[1] * 1.2, (unsigned char) color[2] * 1.2 };
+            unsigned char tmpColor[4] = { (unsigned char) color[0] * 1.2, (unsigned char) color[1] * 1.2, (unsigned char) color[2] * 1.2, 255 };
             highlightFace(interactor, clusterFaceIds[clusterId], tmpColor);
 
             return clusterId;
-        } else if (lastClusterId >= 0) {
+        } else if (lastClusterId >= 0 && clusterStatuses[lastClusterId] == STATUS_ACTIVE) {
             highlightFace(interactor, clusterFaceIds[lastClusterId], clusterColors[lastClusterId]);
         }
 
         return -1;
+    }
+
+    void ResetCluster(const vtkSmartPointer<vtkRenderWindowInteractor>& interactor, int clusterId) {
+        if (clusterId != -1) {
+            clusterStatuses[clusterId] = STATUS_NONE;
+            unsigned char color[4] = { 255, 255, 255, 255 };
+            highlightFace(interactor, clusterFaceIds[clusterId], color);
+
+            vtkSmartPointer<vtkIntArray> faceStatuses = vtkIntArray::SafeDownCast(g->GetVertexData()->GetArray("Statuses"));
+            cout << "Cluster " << clusterId << " has " << clusterFaceIds[clusterId]->GetNumberOfTuples() << " faces.\n";
+            for (vtkIdType i = 0; i < clusterFaceIds[clusterId]->GetNumberOfTuples(); ++i) {
+                faceStatuses->SetValue(clusterFaceIds[clusterId]->GetValue(i), clusterFaceIds[clusterId]->GetValue(i));
+            }
+
+            vtkSmartPointer<vtkIdTypeArray> clusterFaceId = vtkSmartPointer<vtkIdTypeArray>::New();
+            clusterFaceId->SetNumberOfComponents(1);
+            clusterFaceIds[clusterId] = clusterFaceId;
+        }
     }
 
     double* getDijkstraTable(const vtkSmartPointer<vtkDoubleArray>& meshDis, int faceId, const vtkSmartPointer<vtkMutableUndirectedGraph>& g) {
@@ -337,9 +394,11 @@ public:
         center[1] /= ids->GetNumberOfTuples();
         center[2] /= ids->GetNumberOfTuples();
 
+        vtkSmartPointer<vtkIntArray> faceStatuses = vtkIntArray::SafeDownCast(g->GetVertexData()->GetArray("Statuses"));
         double minDis = DBL_MAX;
-        for (vtkIdType i = 0; i < centers->GetNumberOfTuples(); ++i) {
-            double dis = vtkMath::Distance2BetweenPoints(center, centers->GetTuple(i));
+        for (vtkIdType i = 0; i < g->GetNumberOfVertices(); ++i) {
+            int faceId = faceStatuses->GetValue(i);
+            double dis = vtkMath::Distance2BetweenPoints(center, centers->GetTuple(faceId));
             if (dis < minDis) {
                 minDis = dis;
                 centerId = i;

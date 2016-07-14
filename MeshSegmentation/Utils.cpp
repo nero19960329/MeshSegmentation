@@ -2,7 +2,7 @@
 
 #include <cmath>
 
-bool equals(unsigned char a[3], unsigned char b[3], double k) {
+bool equals(unsigned char a[4], unsigned char b[4], double k) {
     return ((unsigned char)(b[0] * k) == a[0]) && 
         ((unsigned char)(b[1] * k) == a[1]) && 
         ((unsigned char)(b[2] * k) == a[2]);
@@ -18,7 +18,7 @@ unsigned char* HSVtoRGB(double h, double s, double v) {
     double t = v * (1 - (1 - f) * s);
 
     double* tmpArray = new double[3];
-    unsigned char* res = new unsigned char[3];
+    unsigned char* res = new unsigned char[4];
 
     if (tmp == 0) {
         tmpArray[0] = v;
@@ -49,6 +49,7 @@ unsigned char* HSVtoRGB(double h, double s, double v) {
     res[0] = (unsigned char)(tmpArray[0] * 256);
     res[1] = (unsigned char)(tmpArray[1] * 256);
     res[2] = (unsigned char)(tmpArray[2] * 256);
+    res[3] = 255;
 
     return res;
 }

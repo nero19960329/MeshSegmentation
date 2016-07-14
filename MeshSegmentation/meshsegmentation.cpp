@@ -17,7 +17,7 @@ MeshSegmentation::MeshSegmentation(QWidget *parent) : QMainWindow(parent) {
     openFileButton = new QPushButton(tr("Open STL File"));
     colorButtons = new QPushButton*[16];
     segmentButton = new QPushButton(tr("Start Segmentation"));
-    hideButton = new QPushButton(tr("Set Hide Mode Open"));
+    resetButton = new QPushButton(tr("Set Reset Mode Open"));
     currentColorLabel = new QLabel(tr(""));
 
     for (int i = 0; i < 16; ++i) {
@@ -35,7 +35,7 @@ MeshSegmentation::MeshSegmentation(QWidget *parent) : QMainWindow(parent) {
         });
     }
     connect(segmentButton, &QPushButton::released, this, &MeshSegmentation::StartSegmentation);
-    connect(hideButton, &QPushButton::released, this, &MeshSegmentation::SetHideMode);
+    connect(resetButton, &QPushButton::released, this, &MeshSegmentation::SetResetMode);
 
     /* ============================================================================= */
 
@@ -47,7 +47,7 @@ MeshSegmentation::MeshSegmentation(QWidget *parent) : QMainWindow(parent) {
     mainLayout->addWidget(modelViewer, 0, 0, modelViewerLen, modelViewerLen);
     mainLayout->addWidget(openFileButton, 0, modelViewerLen, 1, 4);
     mainLayout->addWidget(segmentButton, 1, modelViewerLen, 1, 4);
-    mainLayout->addWidget(hideButton, 2, modelViewerLen, 1, 4);
+    mainLayout->addWidget(resetButton, 2, modelViewerLen, 1, 4);
     for (int i = 0; i < 16; ++i) {
         mainLayout->addWidget(colorButtons[i], modelViewerLen + (i / 8), 6 + i % 8);
     }
@@ -92,14 +92,14 @@ void MeshSegmentation::StartSegmentation() {
     uiManager->StartSegmentation(modelViewer->GetInteractor());
 }
 
-void MeshSegmentation::SetHideMode() {
+void MeshSegmentation::SetResetMode() {
     bool& tmp = modelViewer->style->isHideButtonDown;
 
     if (tmp) {
-        hideButton->setText(tr("Set Hide Mode Open"));
+        resetButton->setText(tr("Set Reset Mode Open"));
         tmp = false;
     } else {
-        hideButton->setText(tr("Set Hide Mode Close"));
+        resetButton->setText(tr("Set Reset Mode Close"));
         tmp = true;
     }
 }

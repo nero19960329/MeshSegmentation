@@ -1,6 +1,7 @@
 #include "vtkConvertToDualGraph.h"
 
 #include <vtkCellData.h>
+#include <vtkCharArray.h>
 #include <vtkDataArray.h>
 #include <vtkDataObject.h>
 #include <vtkDoubleArray.h>
@@ -45,6 +46,8 @@ int vtkConvertToDualGraph::RequestData(vtkInformation *vtkNotUsed(request), vtkI
     areas->SetName("Areas");
     areas->SetNumberOfComponents(1);
     areas->SetNumberOfTuples(numberOfFaces);
+
+    vtkCharArray *faceStatuses = vtkCharArray::SafeDownCast(mesh->GetCellData()->GetArray("Statuses"));
 
     // add vertex for each cell
     for (int i = 0; i < numberOfFaces; ++i) {
@@ -124,16 +127,17 @@ int vtkConvertToDualGraph::RequestData(vtkInformation *vtkNotUsed(request), vtkI
             vtkSmartPointer<vtkIdList> neighborCellIds = vtkSmartPointer<vtkIdList>::New();
             mesh->GetCellNeighbors(i, idList, neighborCellIds);
             for (vtkIdType k = 0; k < neighborCellIds->GetNumberOfIds(); ++k) {
-                if (i >= neighborCellIds->GetId(k)) {
+                vtkIdType neighborCellId = neighborCellIds->GetId(k);
+
+                if (i >= neighborCellId) {
                     continue;
                 }
 
-                vtkIdType neighborCellId = neighborCellIds->GetId(k);
                 neighbors.push_back(neighborCellId);
 
                 double a, b;
                 a = 2.0 * areas->GetValue(i) / (3 * lateral[j]);
-                b = 2.0 * areas->GetValue(neighborCellIds->GetId(k)) / (3 * lateral[j]);
+                b = 2.0 * areas->GetValue(neighborCellId) / (3 * lateral[j]);
 
                 double n0[3], n1[3];
                 normals->GetTuple(i, n0);
@@ -176,7 +180,7 @@ int vtkConvertToDualGraph::RequestData(vtkInformation *vtkNotUsed(request), vtkI
 
     g->GetEdgeData()->AddArray(meshDis);
     g->GetVertexData()->AddArray(centers);
-    g->GetVertexData()->AddArray(areas);
+    /*g->GetVertexData()->AddArray(areas);*/
 
     output->ShallowCopy(g);
 
