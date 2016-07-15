@@ -9,6 +9,7 @@ MeshSegmentation::MeshSegmentation(QWidget *parent) : QMainWindow(parent) {
 
     /* ================================ Initliazation ================================ */
 
+    seedCnt = 32;
     colorNum = 16;
     modelViewerLen = 18;
     widget = new QWidget(this);
@@ -19,10 +20,10 @@ MeshSegmentation::MeshSegmentation(QWidget *parent) : QMainWindow(parent) {
     segmentButton = new QPushButton(tr("Start Segmentation"));
     resetButton = new QPushButton(tr("Set Reset Mode Open"));
     currentColorLabel = new QLabel(tr(""));
-
     for (int i = 0; i < 16; ++i) {
         colorButtons[i] = new QPushButton(tr(""));
     }
+    clusterNumSlider = new QSlider(Qt::Horizontal);
     
     /* =============================================================================== */
 
@@ -36,10 +37,17 @@ MeshSegmentation::MeshSegmentation(QWidget *parent) : QMainWindow(parent) {
     }
     connect(segmentButton, &QPushButton::released, this, &MeshSegmentation::StartSegmentation);
     connect(resetButton, &QPushButton::released, this, &MeshSegmentation::SetResetMode);
+    connect(clusterNumSlider, SIGNAL(valueChanged(int)), this, SLOT(SetClusterNum(int)));
+    connect(clusterNumSlider, &QSlider::sliderReleased, this, &MeshSegmentation::DisplayCluster);
 
     /* ============================================================================= */
 
     /* ================================ Other actions ================================ */
+
+    clusterNumSlider->setMinimum(2);
+    clusterNumSlider->setMaximum(seedCnt);
+    clusterNumSlider->setValue(seedCnt);
+    clusterNumSlider->setTickInterval(1);
 
     currentColorLabel->setStyleSheet("background-color : rgb(0, 0, 0);");
 
@@ -48,6 +56,7 @@ MeshSegmentation::MeshSegmentation(QWidget *parent) : QMainWindow(parent) {
     mainLayout->addWidget(openFileButton, 0, modelViewerLen, 1, 4);
     mainLayout->addWidget(segmentButton, 1, modelViewerLen, 1, 4);
     mainLayout->addWidget(resetButton, 2, modelViewerLen, 1, 4);
+    mainLayout->addWidget(clusterNumSlider, 3, modelViewerLen, 1, 4);
     for (int i = 0; i < 16; ++i) {
         mainLayout->addWidget(colorButtons[i], modelViewerLen + (i / 8), 6 + i % 8);
     }
@@ -89,7 +98,10 @@ void MeshSegmentation::SetBrushColor(int k) {
 }
 
 void MeshSegmentation::StartSegmentation() {
+    uiManager->AutomaticSelectSeeds(seedCnt, modelViewer->GetInteractor());
     uiManager->StartSegmentation(modelViewer->GetInteractor());
+    uiManager->MergeClusters(seedCnt, modelViewer->GetInteractor());
+    clusterNumSlider->setValue(seedCnt);
 }
 
 void MeshSegmentation::SetResetMode() {
@@ -102,4 +114,13 @@ void MeshSegmentation::SetResetMode() {
         resetButton->setText(tr("Set Reset Mode Close"));
         tmp = true;
     }
+}
+
+void MeshSegmentation::SetClusterNum(int k) {
+    currentClusterNum = k;
+}
+
+void MeshSegmentation::DisplayCluster() {
+    uiManager->SetClusterNum(seedCnt, currentClusterNum, modelViewer->GetInteractor());
+
 }

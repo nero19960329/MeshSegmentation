@@ -27,6 +27,7 @@ public:
 private:
     Ui::MeshSegmentationClass ui;
 
+    int seedCnt, currentClusterNum;
     int colorNum;
     int modelViewerLen;
     QString path;
@@ -40,6 +41,7 @@ private:
     QPushButton *segmentButton;
     QPushButton *resetButton;
     QLabel *currentColorLabel;
+    QSlider *clusterNumSlider;
     UserInteractionManager* uiManager;
 
 private slots:
@@ -47,6 +49,8 @@ private slots:
     void SetBrushColor(int k);
     void StartSegmentation();
     void SetResetMode();
+    void SetClusterNum(int k);
+    void DisplayCluster();
 };
 
 #endif // MESHSEGMENTATION_H

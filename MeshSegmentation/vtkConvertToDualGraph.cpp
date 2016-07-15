@@ -98,6 +98,10 @@ int vtkConvertToDualGraph::RequestData(vtkInformation *vtkNotUsed(request), vtkI
     vtkSmartPointer<vtkDoubleArray> angleDis = vtkSmartPointer<vtkDoubleArray>::New();
     angleDis->SetNumberOfComponents(1);
 
+    vtkSmartPointer<vtkDoubleArray> edgeDis = vtkSmartPointer<vtkDoubleArray>::New();
+    edgeDis->SetName("EdgeLens");
+    edgeDis->SetNumberOfComponents(1);
+
     double phyDisAvg = 0.0, angleDisAvg = 0.0;
 
     for (vtkIdType i = 0; i < numberOfFaces; ++i) {
@@ -158,6 +162,7 @@ int vtkConvertToDualGraph::RequestData(vtkInformation *vtkNotUsed(request), vtkI
 
                 phyDis->InsertNextValue(phy);
                 angleDis->InsertNextValue(angle);
+                edgeDis->InsertNextValue(lateral[j]);
 
                 phyDisAvg += phy;
                 angleDisAvg += angle;
@@ -180,6 +185,7 @@ int vtkConvertToDualGraph::RequestData(vtkInformation *vtkNotUsed(request), vtkI
 
     g->GetEdgeData()->AddArray(meshDis);
     g->GetVertexData()->AddArray(centers);
+    g->GetEdgeData()->AddArray(edgeDis);
     /*g->GetVertexData()->AddArray(areas);*/
 
     output->ShallowCopy(g);

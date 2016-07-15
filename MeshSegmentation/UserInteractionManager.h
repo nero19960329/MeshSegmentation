@@ -8,6 +8,7 @@
 #include <vtkDataSet.h>
 #include <vtkDataSetMapper.h>
 #include <vtkDoubleArray.h>
+#include <vtkEdgeListIterator.h>
 #include <vtkExtractSelection.h>
 #include <vtkInEdgeIterator.h>
 #include <vtkIntArray.h>
@@ -66,6 +67,7 @@ private:
     vtkSmartPointer<vtkUnsignedCharArray> faceColors;
     vtkSmartPointer<vtkMutableUndirectedGraph> completeGraph, g;
     vtkSmartPointer<vtkDoubleArray> centers;
+    int **clusterSteps;
 
 public:
     UserInteractionManager() {}
@@ -75,7 +77,7 @@ public:
 
         numberOfFaces = Data->GetNumberOfCells();
 
-        clusterCnt = 16;
+        clusterCnt = 256;
         currentCluster = 0;
         completeGraph = NULL;
         g = NULL;
@@ -97,6 +99,8 @@ public:
         for (int i = 0; i < clusterCnt; ++i) {
             clusterStatuses[i] = STATUS_NONE;
         }
+
+        clusterSteps = NULL;
 
         unsigned char white[4] = { 255, 255, 255, 255 };
         faceColors = vtkSmartPointer<vtkUnsignedCharArray>::New();
@@ -124,29 +128,34 @@ public:
         currentCluster = k;
     }
 
+    void SetClusterNum(int seedCnt, int k, const vtkSmartPointer<vtkRenderWindowInteractor>& interactor) {
+        for (int i = 0; i < seedCnt; ++i) {
+            highlightFace(interactor, clusterFaceIds[i], clusterColors[clusterSteps[seedCnt - k][i]]);
+        }
+    }
+
+    void AutomaticSelectSeeds(int seedCnt, const vtkSmartPointer<vtkRenderWindowInteractor>& interactor) {
+        if (!completeGraph) {
+            convertPolydataToDualGraph();
+            centers = vtkDoubleArray::SafeDownCast(completeGraph->GetVertexData()->GetArray("Centers"));
+            numberOfFaces = completeGraph->GetNumberOfVertices();
+            g = completeGraph;
+        }
+
+        vtkMath::RandomSeed(time(NULL));
+        for (int i = 0; i < seedCnt; ++i) {
+            clusterStatuses[i] = STATUS_SELECT;
+            int seedId = (int)vtkMath::Random(0, numberOfFaces);
+            clusterFaceIds[i]->InsertNextValue(seedId);
+            printf("seedId : %d\n", seedId);
+        }
+    }
+
     void StartSegmentation(const vtkSmartPointer<vtkRenderWindowInteractor>& interactor) {
         // preparation
-        vtkSmartPointer<vtkPoints> points = Data->GetPoints();
-        vtkSmartPointer<vtkDataArray> dataArray = points->GetData();
-
         if (!completeGraph) {
-            vtkSmartPointer<vtkConvertToDualGraph> convert = vtkSmartPointer<vtkConvertToDualGraph>::New();
-            convert->SetInputData(Data);
-            convert->Update();
-
-            completeGraph = vtkSmartPointer<vtkMutableUndirectedGraph>::New();
-            completeGraph->ShallowCopy(vtkMutableUndirectedGraph::SafeDownCast(convert->GetOutput()));
+            convertPolydataToDualGraph();
             centers = vtkDoubleArray::SafeDownCast(completeGraph->GetVertexData()->GetArray("Centers"));
-
-            vtkSmartPointer<vtkIntArray> faceStatuses = vtkSmartPointer<vtkIntArray>::New();
-            faceStatuses->SetNumberOfComponents(1);
-            faceStatuses->SetNumberOfValues(numberOfFaces);
-            faceStatuses->SetName("Statuses");
-            for (vtkIdType i = 0; i < numberOfFaces; ++i) {
-                faceStatuses->SetValue(i, i);
-            }
-            completeGraph->GetVertexData()->AddArray(faceStatuses);
-
             g = completeGraph;
         } else {
             numberOfFaces = completeGraph->GetNumberOfVertices();
@@ -242,6 +251,235 @@ public:
         printf("done!\n");
     }
 
+    void MergeClusters(int seedCnt, const vtkSmartPointer<vtkRenderWindowInteractor>& interactor) {
+        // compute merging costs between clusters
+        vtkSmartPointer<vtkDoubleArray> edgeLens = vtkDoubleArray::SafeDownCast(completeGraph->GetEdgeData()->GetArray("EdgeLens"));
+        vtkSmartPointer<vtkDoubleArray> meshDis = vtkDoubleArray::SafeDownCast(completeGraph->GetEdgeData()->GetArray("Weights"));
+        vtkSmartPointer<vtkEdgeListIterator> edgeIt = vtkSmartPointer<vtkEdgeListIterator>::New();
+        double ***utilValues = new double**[seedCnt];
+        for (int i = 0; i < seedCnt; ++i) {
+            utilValues[i] = new double*[seedCnt];
+            for (int j = 0; j < seedCnt; ++j) {
+                utilValues[i][j] = NULL;
+            }
+        }
+
+        // compute D(Si interact Sj) and L(Si interact Sj)
+        g->GetEdges(edgeIt);
+        unsigned char white[4] = { 255, 255, 255, 255 };
+        while (edgeIt->HasNext()) {
+            vtkEdgeType edge = edgeIt->Next();
+            unsigned char colorA[4], colorB[4];
+
+            faceColors->GetTupleValue(edge.Source, colorA);
+            faceColors->GetTupleValue(edge.Target, colorB);
+            if (equals(colorA, colorB) && !equals(colorA, white) && !equals(colorB, white)) {
+                continue;
+            }
+
+            int clusterNumA, clusterNumB;
+            clusterNumA = getClusterIdByColor(colorA, seedCnt);
+            clusterNumB = getClusterIdByColor(colorB, seedCnt);
+
+            if (!utilValues[clusterNumA][clusterNumB]) {
+                utilValues[clusterNumA][clusterNumB] = new double[5];
+                utilValues[clusterNumB][clusterNumA] = new double[5];
+
+                for (int i = 0; i < 5; ++i) {
+                    utilValues[clusterNumA][clusterNumB][i] = 0.0;
+                    utilValues[clusterNumB][clusterNumA][i] = 0.0;
+                }
+            }
+
+            double D1, L1;
+            D1 = utilValues[clusterNumA][clusterNumB][0];
+            L1 = utilValues[clusterNumA][clusterNumB][1];
+
+            D1 += edgeLens->GetValue(edge.Id) * meshDis->GetValue(edge.Id);
+            L1 += edgeLens->GetValue(edge.Id);
+
+            utilValues[clusterNumA][clusterNumB][0] = D1;
+            utilValues[clusterNumB][clusterNumA][0] = D1;
+            utilValues[clusterNumA][clusterNumB][1] = L1;
+            utilValues[clusterNumB][clusterNumA][1] = L1;
+        }
+
+        // compute L(Si union Sj), D(Si union Sj) and merging cost
+        double **sumValues = new double*[seedCnt];
+        for (int i = 0; i < seedCnt; ++i) {
+            sumValues[i] = new double[2];
+            double sumD = 0.0, sumL = 0.0;
+            for (int j = 0; j < seedCnt; ++j) {
+                if (utilValues[i][j]) {
+                    sumD += utilValues[i][j][0];
+                    sumL += utilValues[i][j][1];
+                }
+            }
+            sumValues[i][0] = sumD;
+            sumValues[i][1] = sumL;
+        }
+
+        set<heapElem, heapElemComp> minHeap;
+        for (int i = 0; i < seedCnt; ++i) {
+            for (int j = 0; j < seedCnt; ++j) {
+                if (utilValues[i][j]) {
+                    utilValues[i][j][2] = sumValues[i][0] + sumValues[j][0] - 2 * utilValues[i][j][0];
+                    utilValues[i][j][3] = sumValues[i][1] + sumValues[j][1] - 2 * utilValues[i][j][1];
+                    utilValues[i][j][4] = (utilValues[i][j][0] / utilValues[i][j][1]) / (utilValues[i][j][2] / utilValues[i][j][3]);
+                    if (i < j) {
+                        minHeap.insert(make_pair(i * seedCnt + j, utilValues[i][j][4]));
+                    }
+                }
+            }
+        }
+
+        // start merging
+        clusterSteps = new int*[seedCnt];
+        for (int i = 0; i < seedCnt; ++i) {
+            clusterSteps[i] = new int[seedCnt];
+            clusterSteps[0][i] = i;
+        }
+
+        int remainClusterCnt = seedCnt;
+        while (remainClusterCnt > 2) {
+            printf("remain %d clusters\n", remainClusterCnt);
+            for (auto tmpPair : minHeap) {
+                int a, b;
+                a = tmpPair.first / seedCnt;
+                b = tmpPair.first % seedCnt;
+                //printf("utilValues(%d, %d) = (%.3lf, %.3lf, %.3lf, %.3lf, %.3lf)\n", a, b, utilValues[a][b][0], utilValues[a][b][1], utilValues[a][b][2], utilValues[a][b][3], utilValues[a][b][4]);
+            }
+
+            int tmp = minHeap.begin()->first;
+            int clusterNumA, clusterNumB;
+
+            clusterNumA = tmp / seedCnt;
+            clusterNumB = tmp % seedCnt;
+
+            printf("c(%d, %d) = %.3lf\n", clusterNumA, clusterNumB, minHeap.begin()->second);
+
+            /*if (minHeap.begin()->second >= 0.6) {
+                break;
+            }
+
+            if (getchar() == 'q') {
+                break;
+            }*/
+
+            printf("merge %d and %d\n", clusterNumA, clusterNumB);
+
+            sumValues[clusterNumA][0] = utilValues[clusterNumA][clusterNumB][2];
+            sumValues[clusterNumA][1] = utilValues[clusterNumA][clusterNumB][3];
+            for (int i = 0; i < seedCnt; ++i) {
+                if (i == clusterNumA || i == clusterNumB) {
+                    continue;
+                }
+
+                if (utilValues[clusterNumA][i] && utilValues[clusterNumB][i]) {
+                    //printf("utilValues(%d, %d) exists and utilValues(%d, %d) exists\n", clusterNumA, i, clusterNumB, i);
+
+                    utilValues[clusterNumA][i][0] += utilValues[clusterNumB][i][0];
+                    utilValues[clusterNumA][i][1] += utilValues[clusterNumB][i][1];
+                    utilValues[clusterNumA][i][2] = sumValues[clusterNumA][0] + sumValues[i][0] - 2 * utilValues[clusterNumA][i][0];
+                    utilValues[clusterNumA][i][3] = sumValues[clusterNumA][1] + sumValues[i][1] - 2 * utilValues[clusterNumA][i][1];
+
+                    utilValues[i][clusterNumA][0] = utilValues[clusterNumA][i][0];
+                    utilValues[i][clusterNumA][1] = utilValues[clusterNumA][i][1];
+                    utilValues[i][clusterNumA][2] = utilValues[clusterNumA][i][2];
+                    utilValues[i][clusterNumA][3] = utilValues[clusterNumA][i][3];
+
+                    minHeap.erase(minHeap.find(make_pair(computeHashValue(clusterNumA, i, seedCnt), utilValues[clusterNumA][i][4])));
+                    minHeap.erase(minHeap.find(make_pair(computeHashValue(clusterNumB, i, seedCnt), utilValues[clusterNumB][i][4])));
+
+                    delete[] utilValues[clusterNumB][i];
+                    delete[] utilValues[i][clusterNumB];
+                    utilValues[clusterNumB][i] = NULL;
+                    utilValues[i][clusterNumB] = NULL;
+
+                } else if (utilValues[clusterNumA][i] && !utilValues[clusterNumB][i]) {
+                    //printf("utilValues(%d, %d) exists and utilValues(%d, %d) does not exist\n", clusterNumA, i, clusterNumB, i);
+
+                    utilValues[clusterNumA][i][2] = sumValues[clusterNumA][0] + sumValues[i][0] - 2 * utilValues[clusterNumA][i][0];
+                    utilValues[clusterNumA][i][3] = sumValues[clusterNumA][1] + sumValues[i][1] - 2 * utilValues[clusterNumA][i][1];
+
+                    utilValues[i][clusterNumA][2] = utilValues[clusterNumA][i][2];
+                    utilValues[i][clusterNumA][3] = utilValues[clusterNumA][i][3];
+
+                    minHeap.erase(minHeap.find(make_pair(computeHashValue(clusterNumA, i, seedCnt), utilValues[clusterNumA][i][4])));
+                } else if (!utilValues[clusterNumA][i] && utilValues[clusterNumB][i]) {
+                    //printf("utilValues(%d, %d) does not exist and utilValues(%d, %d) exists\n", clusterNumA, i, clusterNumB, i);
+
+                    utilValues[clusterNumA][i] = new double[5];
+                    utilValues[clusterNumA][i][0] = utilValues[clusterNumB][i][0];
+                    utilValues[clusterNumA][i][1] = utilValues[clusterNumB][i][1];
+                    utilValues[clusterNumA][i][2] = sumValues[clusterNumA][0] + sumValues[i][0] - 2 * utilValues[clusterNumA][i][0];
+                    utilValues[clusterNumA][i][3] = sumValues[clusterNumA][1] + sumValues[i][1] - 2 * utilValues[clusterNumA][i][1];
+
+                    utilValues[i][clusterNumA] = new double[5];
+                    utilValues[i][clusterNumA][0] = utilValues[clusterNumA][i][0];
+                    utilValues[i][clusterNumA][1] = utilValues[clusterNumA][i][1];
+                    utilValues[i][clusterNumA][2] = utilValues[clusterNumA][i][2];
+                    utilValues[i][clusterNumA][3] = utilValues[clusterNumA][i][3];
+
+                    minHeap.erase(minHeap.find(make_pair(computeHashValue(clusterNumB, i, seedCnt), utilValues[clusterNumB][i][4])));
+
+                    delete[] utilValues[clusterNumB][i];
+                    delete[] utilValues[i][clusterNumB];
+                    utilValues[clusterNumB][i] = NULL;
+                    utilValues[i][clusterNumB] = NULL;
+                } else {
+                    continue;
+                }
+
+                if (abs(utilValues[clusterNumA][i][1] * utilValues[clusterNumA][i][2]) < 1e-3) {
+                    utilValues[clusterNumA][i][4] = DBL_MAX;
+                } else {
+                    utilValues[clusterNumA][i][4] = (utilValues[clusterNumA][i][0] * utilValues[clusterNumA][i][3]) / (utilValues[clusterNumA][i][1] * utilValues[clusterNumA][i][2]);
+                }
+                utilValues[i][clusterNumA][4] = utilValues[clusterNumA][i][4];
+                minHeap.insert(make_pair(computeHashValue(clusterNumA, i, seedCnt), utilValues[clusterNumA][i][4]));
+            }
+
+            minHeap.erase(make_pair(computeHashValue(clusterNumA, clusterNumB, seedCnt), utilValues[clusterNumA][clusterNumB][4]));
+            delete[] utilValues[clusterNumA][clusterNumB];
+            delete[] utilValues[clusterNumB][clusterNumA];
+            utilValues[clusterNumA][clusterNumB] = NULL;
+            utilValues[clusterNumB][clusterNumA] = NULL;
+
+            /*for (vtkIdType i = 0; i < clusterFaceIds[clusterNumB]->GetNumberOfTuples(); ++i) {
+                clusterFaceIds[clusterNumA]->InsertNextValue(clusterFaceIds[clusterNumB]->GetValue(i));
+            }
+
+            highlightFace(interactor, clusterFaceIds[clusterNumA], clusterColors[clusterNumA]);*/
+
+            --remainClusterCnt;
+
+            for (int i = 0; i < seedCnt; ++i) {
+                if (clusterSteps[seedCnt - remainClusterCnt - 1][i] == clusterNumB) {
+                    clusterSteps[seedCnt - remainClusterCnt][i] = clusterNumA;
+                } else {
+                    clusterSteps[seedCnt - remainClusterCnt][i] = clusterSteps[seedCnt - remainClusterCnt - 1][i];
+                }
+                //printf("steps(%d, %d) = %d\n", seedCnt - remainClusterCnt, i, clusterSteps[seedCnt - remainClusterCnt][i]);
+            }
+        }
+
+        for (int i = 0; i < seedCnt; ++i) {
+            for (int j = 0; j < seedCnt; ++j) {
+                if (utilValues[i][j]) {
+                    delete[] utilValues[i][j];
+                }
+            }
+            delete[] utilValues[i];
+        }
+        delete[] utilValues;
+
+        for (int i = 0; i < seedCnt; ++i) {
+            delete[] sumValues[i];
+        }
+        delete[] sumValues;
+    }
+
     void Selecting(const vtkSmartPointer<vtkCellPicker>& picker, const vtkSmartPointer<vtkRenderWindowInteractor>& interactor) {
         vtkSmartPointer<vtkIdTypeArray>& ids = clusterFaceIds[currentCluster];
         unsigned char* selectedColor = clusterColors[currentCluster];
@@ -273,13 +511,7 @@ public:
                 }
             }
 
-            int clusterId = -1;
-            for (int i = 0; i < clusterCnt; ++i) {
-                if (equals(color, clusterColors[i])) {
-                    clusterId = i;
-                    break;
-                }
-            }
+            int clusterId = getClusterIdByColor(color, clusterCnt);
 
             if (clusterId == -1 || clusterStatuses[clusterId] != STATUS_ACTIVE) {
                 return -1;
@@ -314,6 +546,33 @@ public:
         }
     }
 
+private:
+    int computeHashValue(int a, int b, int seedCnt) {
+        if (a < b) {
+            return a * seedCnt + b;
+        } else {
+            return b * seedCnt + a;
+        }
+    }
+
+    void convertPolydataToDualGraph() {
+        vtkSmartPointer<vtkConvertToDualGraph> convert = vtkSmartPointer<vtkConvertToDualGraph>::New();
+        convert->SetInputData(Data);
+        convert->Update();
+
+        completeGraph = vtkSmartPointer<vtkMutableUndirectedGraph>::New();
+        completeGraph->ShallowCopy(vtkMutableUndirectedGraph::SafeDownCast(convert->GetOutput()));
+
+        vtkSmartPointer<vtkIntArray> faceStatuses = vtkSmartPointer<vtkIntArray>::New();
+        faceStatuses->SetNumberOfComponents(1);
+        faceStatuses->SetNumberOfValues(numberOfFaces);
+        faceStatuses->SetName("Statuses");
+        for (vtkIdType i = 0; i < numberOfFaces; ++i) {
+            faceStatuses->SetValue(i, i);
+        }
+        completeGraph->GetVertexData()->AddArray(faceStatuses);
+    }
+
     double* getDijkstraTable(const vtkSmartPointer<vtkDoubleArray>& meshDis, int faceId, const vtkSmartPointer<vtkMutableUndirectedGraph>& g) {
         double *distances = new double[numberOfFaces];
         set<heapElem, heapElemComp> minHeap;
@@ -337,8 +596,7 @@ public:
             if (faceId == j) {
                 continue;
             }
-            pair<vtkIdType, double> tmpPair(j, distances[j]);
-            minHeap.insert(tmpPair);
+            minHeap.insert(make_pair(j, distances[j]));
         }
 
         while (minHeap.size()) {
@@ -361,11 +619,9 @@ public:
 
                 double tmp = distances[u] + meshDis->GetValue(uEdge.Id);
                 if (distances[v] > tmp) {
-                    pair<vtkIdType, double> tmpPair(v, distances[v]);
-                    minHeap.erase(minHeap.find(tmpPair));
+                    minHeap.erase(minHeap.find(make_pair(v, distances[v])));
                     distances[v] = tmp;
-                    tmpPair = pair<vtkIdType, double>(v, distances[v]);
-                    minHeap.insert(tmpPair);
+                    minHeap.insert(make_pair(v, distances[v]));
                 }
             }
         }
@@ -384,10 +640,11 @@ public:
 
     void getCenterFaceId(const vtkSmartPointer<vtkIdTypeArray>& ids, const vtkSmartPointer<vtkDoubleArray>& centers, vtkIdType& centerId) {
         double center[3] = { 0.0, 0.0, 0.0 };
-        for (vtkDataArrayTemplate<vtkIdType>::Iterator it = ids->Begin(); it < ids->End(); ++it) {
-            center[0] += centers->GetTuple(*it)[0];
-            center[1] += centers->GetTuple(*it)[1];
-            center[2] += centers->GetTuple(*it)[2];
+        for (vtkIdType i = 0; i < ids->GetNumberOfTuples(); ++i) {
+            int faceId = ids->GetValue(i);
+            center[0] += centers->GetTuple(faceId)[0];
+            center[1] += centers->GetTuple(faceId)[1];
+            center[2] += centers->GetTuple(faceId)[2];
         }
 
         center[0] /= ids->GetNumberOfTuples();
@@ -404,5 +661,18 @@ public:
                 centerId = i;
             }
         }
+
+//         double *tmp = centers->GetTuple(centerId);
+//         printf("center : (%.2lf, %.2lf, %.2lf)\n", center[0], center[1], center[2]);
+//         printf("approximate : (%.2lf, %.2lf, %.2lf)\n", tmp[0], tmp[1], tmp[2]);
+    }
+
+    int getClusterIdByColor(unsigned char *color, int upperBound) {
+        for (int i = 0; i < upperBound; ++i) {
+            if (equals(color, clusterColors[i])) {
+                return i;
+            }
+        }
+        return -1;
     }
 };
