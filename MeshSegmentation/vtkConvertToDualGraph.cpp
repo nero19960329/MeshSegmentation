@@ -151,13 +151,11 @@ int vtkConvertToDualGraph::RequestData(vtkInformation *vtkNotUsed(request), vtkI
                 centers->GetTuple(neighborCellId, c1);
                 double w[3] = { c1[0] - c0[0], c1[1] - c0[1], c1[2] - c0[2] };
 
-                double tmp = vtkMath::Dot(n0, n1);
                 double phy, angle;
                 phy = a + b;
-                angle = 1 - tmp;
-
-                if (vtkMath::Dot(n0, w) < 0) {  // convex
-                    angle *= 0.20;
+                angle = 0.0;
+                if (vtkMath::Dot(n0, w) >= 0) {
+                    angle = 1 - vtkMath::Dot(n0, n1);
                 }
 
                 phyDis->InsertNextValue(phy);

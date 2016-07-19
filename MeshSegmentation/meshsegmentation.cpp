@@ -9,7 +9,7 @@ MeshSegmentation::MeshSegmentation(QWidget *parent) : QMainWindow(parent) {
 
     /* ================================ Initliazation ================================ */
 
-    seedCnt = 32;
+    seedCnt = 64;
     colorNum = 16;
     modelViewerLen = 18;
     widget = new QWidget(this);
@@ -24,6 +24,8 @@ MeshSegmentation::MeshSegmentation(QWidget *parent) : QMainWindow(parent) {
         colorButtons[i] = new QPushButton(tr(""));
     }
     clusterNumSlider = new QSlider(Qt::Horizontal);
+    uiManager = NULL;
+    colors = NULL;
     
     /* =============================================================================== */
 
@@ -48,6 +50,7 @@ MeshSegmentation::MeshSegmentation(QWidget *parent) : QMainWindow(parent) {
     clusterNumSlider->setMaximum(seedCnt);
     clusterNumSlider->setValue(seedCnt);
     clusterNumSlider->setTickInterval(1);
+    clusterNumSlider->setTickPosition(QSlider::TicksBelow);
 
     currentColorLabel->setStyleSheet("background-color : rgb(0, 0, 0);");
 
@@ -56,11 +59,11 @@ MeshSegmentation::MeshSegmentation(QWidget *parent) : QMainWindow(parent) {
     mainLayout->addWidget(openFileButton, 0, modelViewerLen, 1, 4);
     mainLayout->addWidget(segmentButton, 1, modelViewerLen, 1, 4);
     mainLayout->addWidget(resetButton, 2, modelViewerLen, 1, 4);
-    mainLayout->addWidget(clusterNumSlider, 3, modelViewerLen, 1, 4);
-    for (int i = 0; i < 16; ++i) {
-        mainLayout->addWidget(colorButtons[i], modelViewerLen + (i / 8), 6 + i % 8);
+    mainLayout->addWidget(clusterNumSlider, modelViewerLen, 0, 1, modelViewerLen);
+    /*for (int i = 0; i < 16; ++i) {
+        mainLayout->addWidget(colorButtons[i], modelViewerLen + 1 + (i / 8), 6 + i % 8);
     }
-    mainLayout->addWidget(currentColorLabel, modelViewerLen, 4, 2, 2);
+    mainLayout->addWidget(currentColorLabel, modelViewerLen + 1, 4, 2, 2)*/;
 
     widget->setLayout(mainLayout);
 
@@ -78,6 +81,10 @@ void MeshSegmentation::SetModelFileName() {
     path = QFileDialog::getOpenFileName(this, tr("Open STL file"), tr("../../objects/"), tr("STL Model Files(*.stl)"));
     if (path.isEmpty()) {
         return;
+    }
+
+    if (uiManager) {
+        delete uiManager;
     }
     uiManager = modelViewer->RenderModel(path.toStdString());
     colors = uiManager->GetColors();

@@ -2,6 +2,14 @@
 
 #include <cmath>
 
+double distanceBetweenVectors(unsigned char a[4], unsigned char b[4]) {
+    double tmp = 0.0;
+    for (int i = 0; i < 4; ++i) {
+        tmp += (a[i] - b[i]) * (a[i] - b[i]);
+    }
+    return sqrt(tmp);
+}
+
 bool equals(unsigned char a[4], unsigned char b[4], double k) {
     return ((unsigned char)(b[0] * k) == a[0]) && 
         ((unsigned char)(b[1] * k) == a[1]) && 

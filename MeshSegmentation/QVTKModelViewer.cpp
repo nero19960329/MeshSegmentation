@@ -23,16 +23,9 @@ UserInteractionManager* QVTKModelViewer::RenderModel(string inputFileName) {
     reader->Update();
 
     vtkSmartPointer<vtkPolyData> mesh = reader->GetOutput();
-    vtkSmartPointer<vtkPoints> points = mesh->GetPoints();
-    vtkSmartPointer<vtkDataArray> dataArray = points->GetData();
     vtkIdType numberOfFaces = mesh->GetNumberOfCells();
-    vtkSmartPointer<vtkIdList> faceIndex = vtkSmartPointer<vtkIdList>::New();
 
     cout << "numberOfFaces : " << numberOfFaces << endl;
-    for (int i = 0; i < numberOfFaces; ++i) {
-        mesh->GetCellPoints(i, faceIndex);
-        vtkIdType vertexIndex = faceIndex->GetId(0);
-    }
 
     vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
     mapper->SetInputConnection(reader->GetOutputPort());

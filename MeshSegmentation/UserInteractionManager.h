@@ -31,9 +31,10 @@
 #include <vtkUnstructuredGrid.h>
 
 #include <algorithm>
+#include <stdio.h>
+
 #include <list>
 #include <set>
-#include <stdio.h>
 #include <unordered_map>
 #include <vector>
 
@@ -53,6 +54,20 @@ public:
     }
 };
 
+class UnsignedCharHashFunc {
+public:
+    int operator () (unsigned char* color) {
+        return color[0] * 256 * 256 + color[1] * 256 + color[2];
+    }
+};
+
+class UnsignedCharCmpFunc {
+public:
+    bool operator () (unsigned char* colorA, unsigned char* colorB) {
+        return (colorA[0] == colorB[0]) && (colorA[1] == colorB[1]) && (colorA[2] == colorB[2]);
+    }
+};
+
 enum ClusterStatus { STATUS_NONE, STATUS_SELECT, STATUS_ACTIVE };
 
 class UserInteractionManager {
@@ -63,6 +78,7 @@ private:
     int clusterCnt, currentCluster;
     int *clusterStatuses;
     unsigned char **clusterColors;
+    unordered_map<unsigned char*, int, UnsignedCharHashFunc, UnsignedCharCmpFunc> colorToClusterIdMap;
     vtkSmartPointer<vtkIdTypeArray> *clusterFaceIds;
     vtkSmartPointer<vtkUnsignedCharArray> faceColors;
     vtkSmartPointer<vtkMutableUndirectedGraph> completeGraph, g;
@@ -77,22 +93,23 @@ public:
 
         numberOfFaces = Data->GetNumberOfCells();
 
-        clusterCnt = 256;
+        clusterCnt = 64;
         currentCluster = 0;
         completeGraph = NULL;
         g = NULL;
 
         double h, s, v;
         h = goldenRatio * 8 - 4;
-        s = 0.7;
+        s = 0.9;
         v = 0.8;
 
         clusterColors = new unsigned char*[clusterCnt];
         for (int i = 0; i < clusterCnt; ++i) {
             unsigned char* clusterColor = HSVtoRGB(h, s, v);
             clusterColors[i] = clusterColor;
+            colorToClusterIdMap[clusterColor] = i;
             h += goldenRatio;
-            h = h >= 1 ? h - 1 : h;
+            h -= floor(h);
         }
 
         clusterStatuses = new int[clusterCnt];
@@ -120,6 +137,15 @@ public:
         }
     }
 
+    ~UserInteractionManager() {
+        for (int i = 0; i < clusterCnt; ++i) {
+            delete[] clusterColors[i];
+        }
+        delete[] clusterColors;
+        delete[] clusterStatuses;
+        delete[] clusterFaceIds;
+    }
+
     unsigned char **GetColors() {
         return clusterColors;
     }
@@ -142,12 +168,16 @@ public:
             g = completeGraph;
         }
 
+        unordered_map<int, bool> seedMap;
         vtkMath::RandomSeed(time(NULL));
         for (int i = 0; i < seedCnt; ++i) {
             clusterStatuses[i] = STATUS_SELECT;
             int seedId = (int)vtkMath::Random(0, numberOfFaces);
+            while (seedMap[seedId]) {
+                seedId = (int)vtkMath::Random(0, numberOfFaces);
+            }
+            seedMap[seedId] = true;
             clusterFaceIds[i]->InsertNextValue(seedId);
-            printf("seedId : %d\n", seedId);
         }
     }
 
@@ -248,6 +278,9 @@ public:
             faceStatuses->SetValue(i, -1);
         }
 
+        delete[] clusterCenterIds;
+        delete[] minDisIds;
+
         printf("done!\n");
     }
 
@@ -264,7 +297,7 @@ public:
             }
         }
 
-        // compute D(Si interact Sj) and L(Si interact Sj)
+        // compute D1, i.e. D(Si interact Sj) and L1, i.e. L(Si interact Sj)
         g->GetEdges(edgeIt);
         unsigned char white[4] = { 255, 255, 255, 255 };
         while (edgeIt->HasNext()) {
@@ -273,13 +306,13 @@ public:
 
             faceColors->GetTupleValue(edge.Source, colorA);
             faceColors->GetTupleValue(edge.Target, colorB);
-            if (equals(colorA, colorB) && !equals(colorA, white) && !equals(colorB, white)) {
+            if (equals(colorA, colorB) || equals(colorA, white) || equals(colorB, white)) {
                 continue;
             }
 
             int clusterNumA, clusterNumB;
-            clusterNumA = getClusterIdByColor(colorA, seedCnt);
-            clusterNumB = getClusterIdByColor(colorB, seedCnt);
+            clusterNumA = colorToClusterIdMap[colorA];
+            clusterNumB = colorToClusterIdMap[colorB];
 
             if (!utilValues[clusterNumA][clusterNumB]) {
                 utilValues[clusterNumA][clusterNumB] = new double[5];
@@ -304,7 +337,7 @@ public:
             utilValues[clusterNumB][clusterNumA][1] = L1;
         }
 
-        // compute L(Si union Sj), D(Si union Sj) and merging cost
+        // compute D2, i.e. D(Si union Sj), L2, i.e. L(Si union Sj) and merging cost
         double **sumValues = new double*[seedCnt];
         for (int i = 0; i < seedCnt; ++i) {
             sumValues[i] = new double[2];
@@ -342,42 +375,48 @@ public:
 
         int remainClusterCnt = seedCnt;
         while (remainClusterCnt > 2) {
-            printf("remain %d clusters\n", remainClusterCnt);
-            for (auto tmpPair : minHeap) {
-                int a, b;
-                a = tmpPair.first / seedCnt;
-                b = tmpPair.first % seedCnt;
-                //printf("utilValues(%d, %d) = (%.3lf, %.3lf, %.3lf, %.3lf, %.3lf)\n", a, b, utilValues[a][b][0], utilValues[a][b][1], utilValues[a][b][2], utilValues[a][b][3], utilValues[a][b][4]);
-            }
-
             int tmp = minHeap.begin()->first;
             int clusterNumA, clusterNumB;
 
             clusterNumA = tmp / seedCnt;
             clusterNumB = tmp % seedCnt;
 
-            printf("c(%d, %d) = %.3lf\n", clusterNumA, clusterNumB, minHeap.begin()->second);
-
-            /*if (minHeap.begin()->second >= 0.6) {
-                break;
-            }
-
-            if (getchar() == 'q') {
-                break;
-            }*/
-
-            printf("merge %d and %d\n", clusterNumA, clusterNumB);
-
-            sumValues[clusterNumA][0] = utilValues[clusterNumA][clusterNumB][2];
-            sumValues[clusterNumA][1] = utilValues[clusterNumA][clusterNumB][3];
+            // pick the color that make the most difference between itself and its neighbors
+            list<int> neighborIds;
+            double minColorDifA, minColorDifB;
+            minColorDifA = DBL_MAX;
+            minColorDifB = DBL_MAX;
             for (int i = 0; i < seedCnt; ++i) {
                 if (i == clusterNumA || i == clusterNumB) {
                     continue;
                 }
 
-                if (utilValues[clusterNumA][i] && utilValues[clusterNumB][i]) {
-                    //printf("utilValues(%d, %d) exists and utilValues(%d, %d) exists\n", clusterNumA, i, clusterNumB, i);
+                double tmpDis;
+                if (utilValues[clusterNumA][i] || utilValues[clusterNumB][i]) {
+                    neighborIds.push_back(i);
 
+                    tmpDis = distanceBetweenVectors(clusterColors[clusterNumA], clusterColors[i]);
+                    if (minColorDifA > tmpDis) {
+                        minColorDifA = tmpDis;
+                    }
+
+                    tmpDis = distanceBetweenVectors(clusterColors[clusterNumB], clusterColors[i]);
+                    if (minColorDifB > tmpDis) {
+                        minColorDifB = tmpDis;
+                    }
+                }
+            }
+
+            if (minColorDifA < minColorDifB) {
+                swap(clusterNumA, clusterNumB);
+            }
+
+            //printf("c(%d, %d) = %.3lf\n", clusterNumA, clusterNumB, minHeap.begin()->second);
+
+            sumValues[clusterNumA][0] = utilValues[clusterNumA][clusterNumB][2];
+            sumValues[clusterNumA][1] = utilValues[clusterNumA][clusterNumB][3];
+            for (auto i : neighborIds) {
+                if (utilValues[clusterNumA][i] && utilValues[clusterNumB][i]) {
                     utilValues[clusterNumA][i][0] += utilValues[clusterNumB][i][0];
                     utilValues[clusterNumA][i][1] += utilValues[clusterNumB][i][1];
                     utilValues[clusterNumA][i][2] = sumValues[clusterNumA][0] + sumValues[i][0] - 2 * utilValues[clusterNumA][i][0];
@@ -397,8 +436,6 @@ public:
                     utilValues[i][clusterNumB] = NULL;
 
                 } else if (utilValues[clusterNumA][i] && !utilValues[clusterNumB][i]) {
-                    //printf("utilValues(%d, %d) exists and utilValues(%d, %d) does not exist\n", clusterNumA, i, clusterNumB, i);
-
                     utilValues[clusterNumA][i][2] = sumValues[clusterNumA][0] + sumValues[i][0] - 2 * utilValues[clusterNumA][i][0];
                     utilValues[clusterNumA][i][3] = sumValues[clusterNumA][1] + sumValues[i][1] - 2 * utilValues[clusterNumA][i][1];
 
@@ -407,8 +444,6 @@ public:
 
                     minHeap.erase(minHeap.find(make_pair(computeHashValue(clusterNumA, i, seedCnt), utilValues[clusterNumA][i][4])));
                 } else if (!utilValues[clusterNumA][i] && utilValues[clusterNumB][i]) {
-                    //printf("utilValues(%d, %d) does not exist and utilValues(%d, %d) exists\n", clusterNumA, i, clusterNumB, i);
-
                     utilValues[clusterNumA][i] = new double[5];
                     utilValues[clusterNumA][i][0] = utilValues[clusterNumB][i][0];
                     utilValues[clusterNumA][i][1] = utilValues[clusterNumB][i][1];
@@ -446,12 +481,6 @@ public:
             utilValues[clusterNumA][clusterNumB] = NULL;
             utilValues[clusterNumB][clusterNumA] = NULL;
 
-            /*for (vtkIdType i = 0; i < clusterFaceIds[clusterNumB]->GetNumberOfTuples(); ++i) {
-                clusterFaceIds[clusterNumA]->InsertNextValue(clusterFaceIds[clusterNumB]->GetValue(i));
-            }
-
-            highlightFace(interactor, clusterFaceIds[clusterNumA], clusterColors[clusterNumA]);*/
-
             --remainClusterCnt;
 
             for (int i = 0; i < seedCnt; ++i) {
@@ -460,7 +489,6 @@ public:
                 } else {
                     clusterSteps[seedCnt - remainClusterCnt][i] = clusterSteps[seedCnt - remainClusterCnt - 1][i];
                 }
-                //printf("steps(%d, %d) = %d\n", seedCnt - remainClusterCnt, i, clusterSteps[seedCnt - remainClusterCnt][i]);
             }
         }
 
@@ -661,10 +689,6 @@ private:
                 centerId = i;
             }
         }
-
-//         double *tmp = centers->GetTuple(centerId);
-//         printf("center : (%.2lf, %.2lf, %.2lf)\n", center[0], center[1], center[2]);
-//         printf("approximate : (%.2lf, %.2lf, %.2lf)\n", tmp[0], tmp[1], tmp[2]);
     }
 
     int getClusterIdByColor(unsigned char *color, int upperBound) {
