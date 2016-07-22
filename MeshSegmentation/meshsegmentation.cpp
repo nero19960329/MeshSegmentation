@@ -16,13 +16,9 @@ MeshSegmentation::MeshSegmentation(QWidget *parent) : QMainWindow(parent) {
     modelViewer = new QVTKModelViewer(this);
     mainLayout = new QGridLayout;
     openFileButton = new QPushButton(tr("Open STL File"));
-    colorButtons = new QPushButton*[16];
     segmentButton = new QPushButton(tr("Start Segmentation"));
-    resetButton = new QPushButton(tr("Set Reset Mode Open"));
-    currentColorLabel = new QLabel(tr(""));
-    for (int i = 0; i < 16; ++i) {
-        colorButtons[i] = new QPushButton(tr(""));
-    }
+    mergeButton = new QPushButton(tr("Open Merge Mode"));
+    divideButton = new QPushButton(tr("Open Divide Mode"));
     clusterNumSlider = new QSlider(Qt::Horizontal);
     uiManager = NULL;
     colors = NULL;
@@ -32,13 +28,9 @@ MeshSegmentation::MeshSegmentation(QWidget *parent) : QMainWindow(parent) {
     /* ================================ Connections ================================ */
     
     connect(openFileButton, &QPushButton::released, this, &MeshSegmentation::SetModelFileName);
-    for (int i = 0; i < 16; ++i) {
-        connect(colorButtons[i], &QPushButton::released, this, [=] {
-            SetBrushColor(i);
-        });
-    }
     connect(segmentButton, &QPushButton::released, this, &MeshSegmentation::StartSegmentation);
-    connect(resetButton, &QPushButton::released, this, &MeshSegmentation::SetResetMode);
+    connect(mergeButton, &QPushButton::released, this, &MeshSegmentation::SetMergeMode);
+    connect(divideButton, &QPushButton::released, this, &MeshSegmentation::SetDivideMode);
     connect(clusterNumSlider, SIGNAL(valueChanged(int)), this, SLOT(SetClusterNum(int)));
     connect(clusterNumSlider, &QSlider::sliderReleased, this, &MeshSegmentation::DisplayCluster);
 
@@ -53,18 +45,13 @@ MeshSegmentation::MeshSegmentation(QWidget *parent) : QMainWindow(parent) {
     clusterNumSlider->setTickPosition(QSlider::TicksBelow);
     clusterNumSlider->setDisabled(true);
 
-    currentColorLabel->setStyleSheet("background-color : rgb(0, 0, 0);");
-
     mainLayout->setMargin(10);
     mainLayout->addWidget(modelViewer, 0, 0, modelViewerLen, modelViewerLen);
     mainLayout->addWidget(openFileButton, 0, modelViewerLen, 1, 4);
     mainLayout->addWidget(segmentButton, 1, modelViewerLen, 1, 4);
-    mainLayout->addWidget(resetButton, 2, modelViewerLen, 1, 4);
+    mainLayout->addWidget(mergeButton, 2, modelViewerLen, 1, 4);
+    mainLayout->addWidget(divideButton, 3, modelViewerLen, 1, 4);
     mainLayout->addWidget(clusterNumSlider, modelViewerLen, 0, 1, modelViewerLen);
-    /*for (int i = 0; i < 16; ++i) {
-        mainLayout->addWidget(colorButtons[i], modelViewerLen + 1 + (i / 8), 6 + i % 8);
-    }
-    mainLayout->addWidget(currentColorLabel, modelViewerLen + 1, 4, 2, 2)*/;
 
     widget->setLayout(mainLayout);
 
@@ -90,64 +77,93 @@ void MeshSegmentation::SetModelFileName() {
     uiManager = modelViewer->RenderModel(path.toStdString());
     colors = uiManager->GetColors();
 
-    resetButton->setText(tr("Set Reset Mode Open"));
-    modelViewer->style->isHideButtonDown = false;
-
-    QString tmpStr;
-    for (int i = colorNum - 1; i >= 0; --i) {
-        unsigned char *color = colors[i];
-        tmpStr = QString("background-color : rgb(%1, %2, %3);").arg(QString::number(color[0]), QString::number(color[1]), QString::number(color[2]));
-        colorButtons[i]->setStyleSheet(tmpStr);
-    }
-    currentColorLabel->setStyleSheet(tmpStr);
-}
-
-void MeshSegmentation::SetBrushColor(int k) {
-    uiManager->SetCurrentCluster(k);
-    QString tmpStr = QString("background-color : rgb(%1, %2, %3);").arg(QString::number(colors[k][0]), QString::number(colors[k][1]), QString::number(colors[k][2]));
-    currentColorLabel->setStyleSheet(tmpStr);
+    mergeButton->setText(tr("Open Merge Mode"));
+    divideButton->setText(tr("Open Divide Mode"));
+    modelViewer->style->isMergeButtonDown = false;
+    modelViewer->style->isDivideButtonDown = false;
 }
 
 void MeshSegmentation::StartSegmentation() {
-    double dur[3];
+    double dur[4], *dur_2;
     clock_t begin, end;
+    clock_t totalBegin, totalEnd;
 
-    cout << "Step 1 : Automatic selecting seeds . . ." << endl;
+    cout << "=============================================" << endl;
+    cout << "Step 1 : Converting model to dual graph . . ." << endl;
     begin = clock();
-    uiManager->AutomaticSelectSeeds(seedCnt, modelViewer->GetInteractor());
+    totalBegin = begin;
+    uiManager->ConvertPolydataToDualGraph();
     end = clock();
     dur[0] = (end - begin) * 1.0 / CLOCKS_PER_SEC;
 
-    cout << "Step 2 : Segmenting . . ." << endl;
+    cout << "Step 2 : Automatic selecting seeds . . ." << endl;
     begin = clock();
-    uiManager->StartSegmentation(modelViewer->GetInteractor());
+    uiManager->AutomaticSelectSeeds(seedCnt, modelViewer->GetInteractor());
     end = clock();
     dur[1] = (end - begin) * 1.0 / CLOCKS_PER_SEC;
 
-    cout << "Step3 : Merging clusters . . ." << endl;
+    cout << "Step 3 : Segmenting . . ." << endl;
     begin = clock();
-    uiManager->MergeClusters(seedCnt, modelViewer->GetInteractor());
+    dur_2 = uiManager->StartSegmentation(modelViewer->GetInteractor());
     end = clock();
     dur[2] = (end - begin) * 1.0 / CLOCKS_PER_SEC;
 
-    cout << "time 1 : " << dur[0] << "s" << endl;
-    cout << "time 2 : " << dur[1] << "s" << endl;
-    cout << "time 3 : " << dur[2] << "s" << endl;
+    cout << "Step 4 : Merging clusters . . ." << endl;
+    begin = clock();
+    uiManager->MergeClusters(seedCnt, modelViewer->GetInteractor());
+    end = clock();
+    totalEnd = end;
+    dur[3] = (end - begin) * 1.0 / CLOCKS_PER_SEC;
+    cout << "=============================================" << endl;
+
+    cout << "Runtime analysis : " << endl;
+    double totalDur = (totalEnd - totalBegin) * 1.0 / CLOCKS_PER_SEC;
+    printf("time 1 : \t%.3lf\t\t%.1lf%%\n", dur[0], dur[0] * 100.0 / totalDur);
+    printf("time 2 : \t%.3lf\t\t%.1lf%%\n", dur[1], dur[1] * 100.0 / totalDur);
+    printf("time 3 : \t%.3lf\t\t%.1lf%%\n", dur[2], dur[2] * 100.0 / totalDur);
+
+    printf("- time 3.1 : \t%.3lf\t\t%.1lf%%\n", dur_2[0], dur_2[0] * 100.0 / totalDur);
+    printf("- time 3.2 : \t%.3lf\t\t%.1lf%%\n", dur_2[1], dur_2[1] * 100.0 / totalDur);
+    printf("- time 3.3 : \t%.3lf\t\t%.1lf%%\n", dur_2[2], dur_2[2] * 100.0 / totalDur);
+    printf("- time 3.4 : \t%.3lf\t\t%.1lf%%\n", dur_2[3], dur_2[3] * 100.0 / totalDur);
+    printf("- time 3.5 : \t%.3lf\t\t%.1lf%%\n", dur_2[4], dur_2[4] * 100.0 / totalDur);
+
+    printf("time 4 : \t%.3lf\t\t%.1lf%%\n", dur[3], dur[3] * 100.0 / totalDur);
+    printf("total : \t%.3lf\n", totalDur);
+    cout << "=============================================" << endl;
 
     clusterNumSlider->setValue(seedCnt);
     clusterNumSlider->setDisabled(false);
 }
 
-void MeshSegmentation::SetResetMode() {
-    bool& tmp = modelViewer->style->isHideButtonDown;
+void MeshSegmentation::SetMergeMode() {
+    bool& tmp = modelViewer->style->isMergeButtonDown;
 
     if (tmp) {
-        resetButton->setText(tr("Set Reset Mode Open"));
+        mergeButton->setText(tr("Open Merge Mode"));
         tmp = false;
     } else {
-        clusterNumSlider->setDisabled(true);
-        uiManager->ConfirmClusterSegmentation(seedCnt, currentClusterNum);
-        resetButton->setText(tr("Set Reset Mode Close"));
+        if (clusterNumSlider->isEnabled()) {
+            clusterNumSlider->setDisabled(true);
+            uiManager->ConfirmClusterSegmentation(seedCnt, currentClusterNum);
+        }
+        mergeButton->setText(tr("Close Merge Mode"));
+        tmp = true;
+    }
+}
+
+void MeshSegmentation::SetDivideMode() {
+    bool& tmp = modelViewer->style->isDivideButtonDown;
+
+    if (tmp) {
+        divideButton->setText(tr("Open Divide Mode"));
+        tmp = false;
+    } else {
+        if (clusterNumSlider->isEnabled()) {
+            clusterNumSlider->setDisabled(true);
+            uiManager->ConfirmClusterSegmentation(seedCnt, currentClusterNum);
+        }
+        divideButton->setText(tr("Close Divide Mode"));
         tmp = true;
     }
 }

@@ -47,8 +47,6 @@ int vtkConvertToDualGraph::RequestData(vtkInformation *vtkNotUsed(request), vtkI
     areas->SetNumberOfComponents(1);
     areas->SetNumberOfTuples(numberOfFaces);
 
-    vtkCharArray *faceStatuses = vtkCharArray::SafeDownCast(mesh->GetCellData()->GetArray("Statuses"));
-
     // add vertex for each cell
     for (int i = 0; i < numberOfFaces; ++i) {
         g->AddVertex();

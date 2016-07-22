@@ -10,7 +10,8 @@ public:
     UserInteractionManager* uiManager;
     bool isLeftButtonDown;
     bool isRightButtonDown;
-    bool isHideButtonDown;
+    bool isMergeButtonDown;
+    bool isDivideButtonDown;
 
 private:
     int lastClusterId;

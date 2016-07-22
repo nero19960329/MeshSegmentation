@@ -9,6 +9,11 @@ public:
 public:
     ListNode() : next(NULL) {}
     ListNode(const listElem& elem) : key(elem), next(NULL) {}
+    ~ListNode() {
+        if (next) {
+            delete next;
+        }
+    }
 };
 
 template <class listElem>
@@ -24,6 +29,12 @@ public:
     List() : size(0) {
         root = new ListNode<listElem>();
         tail = root;
+    }
+
+    ~List() {
+        delete root;
+        root = NULL;
+        tail = NULL;
     }
 
     void push_back(const listElem& elem) {

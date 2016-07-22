@@ -215,6 +215,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="customInteractorStyle.h" />
+    <ClInclude Include="DisjointSet.h" />
     <ClInclude Include="GeneratedFiles\ui_meshsegmentation.h" />
     <CustomBuild Include="QVTKModelViewer.h">
       <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(QTDIR)\bin\moc.exe;%(FullPath)</AdditionalInputs>

@@ -37,18 +37,17 @@ private:
     QVTKModelViewer *modelViewer;
     QGridLayout *mainLayout;
     QPushButton *openFileButton;
-    QPushButton **colorButtons;
     QPushButton *segmentButton;
-    QPushButton *resetButton;
-    QLabel *currentColorLabel;
+    QPushButton *mergeButton;
+    QPushButton *divideButton;
     QSlider *clusterNumSlider;
     UserInteractionManager* uiManager;
 
 private slots:
     void SetModelFileName();
-    void SetBrushColor(int k);
     void StartSegmentation();
-    void SetResetMode();
+    void SetMergeMode();
+    void SetDivideMode();
     void SetClusterNum(int k);
     void DisplayCluster();
 };

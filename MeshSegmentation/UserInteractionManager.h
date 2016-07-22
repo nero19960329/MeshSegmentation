@@ -18,9 +18,11 @@
 
 #include <stdio.h>
 
+#include <algorithm>
 #include <set>
 #include <unordered_map>
 
+#include "DisjointSet.h"
 #include "List.h"
 #include "MinHeap.h"
 #include "Utils.h"
@@ -39,20 +41,6 @@ public:
     }
 };
 
-class UnsignedCharHashFunc {
-public:
-    int operator () (unsigned char* color) {
-        return color[0] * 256 * 256 + color[1] * 256 + color[2];
-    }
-};
-
-class UnsignedCharCmpFunc {
-public:
-    bool operator () (unsigned char* colorA, unsigned char* colorB) {
-        return (colorA[0] == colorB[0]) && (colorA[1] == colorB[1]) && (colorA[2] == colorB[2]);
-    }
-};
-
 enum ClusterStatus { STATUS_NONE, STATUS_SELECT, STATUS_ACTIVE };
 
 class UserInteractionManager {
@@ -64,12 +52,13 @@ private:
     int *clusterStatuses;
     unsigned char **clusterColors;
     unordered_map<int, int> colorHashMap;
-    unordered_map<unsigned char*, int, UnsignedCharHashFunc, UnsignedCharCmpFunc> colorToClusterIdMap;
+    int *faceIdToClusterMap;
     vtkSmartPointer<vtkIdTypeArray> *clusterFaceIds;
     vtkSmartPointer<vtkUnsignedCharArray> faceColors;
-    vtkSmartPointer<vtkMutableUndirectedGraph> completeGraph, g;
+    vtkSmartPointer<vtkMutableUndirectedGraph> g;
     vtkSmartPointer<vtkDoubleArray> centers;
     int **clusterSteps;
+    vtkSmartPointer<vtkIdTypeArray> divideLineFaceIds;
 
 public:
     UserInteractionManager() {}
@@ -81,7 +70,6 @@ public:
 
         clusterCnt = 64;
         currentCluster = 0;
-        completeGraph = NULL;
         g = NULL;
 
         double h, s, v;
@@ -93,7 +81,6 @@ public:
         for (int i = 0; i < clusterCnt; ++i) {
             unsigned char* clusterColor = HSVtoRGB(h, s, v);
             clusterColors[i] = clusterColor;
-            colorToClusterIdMap[clusterColor] = i;
             h += goldenRatio;
             h -= floor(h);
         }
@@ -114,10 +101,15 @@ public:
         faceColors->SetNumberOfComponents(4);
         faceColors->SetNumberOfTuples(numberOfFaces);
         faceColors->SetName("Colors");
-        for (vtkIdType i = 0; i < numberOfFaces; ++i) {
+        for (int i = 0; i < numberOfFaces; ++i) {
             faceColors->SetTupleValue(i, white);
         }
         Data->GetCellData()->SetScalars(faceColors);
+
+        faceIdToClusterMap = new int[numberOfFaces];
+        for (int i = 0; i < numberOfFaces; ++i) {
+            faceIdToClusterMap[i] = -1;
+        }
 
         clusterFaceIds = new vtkSmartPointer<vtkIdTypeArray>[clusterCnt];
         for (int i = 0; i < clusterCnt; ++i) {
@@ -125,6 +117,8 @@ public:
             clusterFaceId->SetNumberOfComponents(1);
             clusterFaceIds[i] = clusterFaceId;
         }
+
+        divideLineFaceIds = vtkSmartPointer<vtkIdTypeArray>::New();
     }
 
     ~UserInteractionManager() {
@@ -171,6 +165,7 @@ public:
             if (clusterId != i) {
                 for (int j = 0; j < clusterFaceIds[i]->GetNumberOfTuples(); ++j) {
                     clusterFaceIds[clusterId]->InsertNextValue(clusterFaceIds[i]->GetValue(j));
+                    faceIdToClusterMap[clusterFaceIds[i]->GetValue(j)] = clusterId;
                 }
                 clusterFaceIds[i] = NULL;
                 clusterStatuses[i] = STATUS_NONE;
@@ -187,15 +182,24 @@ public:
         highlightFace(interactor, clusterFaceIds[beginClusterId], clusterColors[colorHashMap[beginClusterId]]);
     }
 
-    void AutomaticSelectSeeds(int seedCnt, const vtkSmartPointer<vtkRenderWindowInteractor>& interactor) {
-        if (!completeGraph) {
-            convertPolydataToDualGraph();
-            centers = vtkDoubleArray::SafeDownCast(completeGraph->GetVertexData()->GetArray("Centers"));
-            numberOfFaces = completeGraph->GetNumberOfVertices();
-            g = completeGraph;
-        }
+    void ConvertPolydataToDualGraph() {
+        vtkSmartPointer<vtkConvertToDualGraph> convert = vtkSmartPointer<vtkConvertToDualGraph>::New();
+        convert->SetInputData(Data);
+        convert->Update();
 
-        unordered_map<int, bool> seedMap;
+        g = vtkSmartPointer<vtkMutableUndirectedGraph>::New();
+        g->ShallowCopy(vtkMutableUndirectedGraph::SafeDownCast(convert->GetOutput()));
+        centers = vtkDoubleArray::SafeDownCast(g->GetVertexData()->GetArray("Centers"));
+
+        cout << "vertex number : " << g->GetNumberOfVertices() << endl;
+        cout << "edge number : " << g->GetNumberOfEdges() << endl;
+    }
+
+    void AutomaticSelectSeeds(int seedCnt, const vtkSmartPointer<vtkRenderWindowInteractor>& interactor) {
+        numberOfFaces = g->GetNumberOfVertices();
+
+        bool *seedMap = new bool[numberOfFaces];
+        memset(seedMap, 0, numberOfFaces * sizeof(bool));
         vtkMath::RandomSeed(time(NULL));
         for (int i = 0; i < seedCnt; ++i) {
             clusterStatuses[i] = STATUS_SELECT;
@@ -206,64 +210,49 @@ public:
             seedMap[seedId] = true;
             clusterFaceIds[i]->InsertNextValue(seedId);
         }
+
+        delete[] seedMap;
     }
 
-    void StartSegmentation(const vtkSmartPointer<vtkRenderWindowInteractor>& interactor) {
-        // preparation
-        if (!completeGraph) {
-            convertPolydataToDualGraph();
-            centers = vtkDoubleArray::SafeDownCast(completeGraph->GetVertexData()->GetArray("Centers"));
-            g = completeGraph;
-        } else {
-            numberOfFaces = completeGraph->GetNumberOfVertices();
-            vtkSmartPointer<vtkIntArray> faceStatuses = vtkIntArray::SafeDownCast(g->GetVertexData()->GetArray("Statuses"));
-
-            vtkSmartPointer<vtkIdTypeArray> removeVertices = vtkIdTypeArray::New();
-            removeVertices->SetNumberOfComponents(1);
-            for (vtkIdType i = 0; i < numberOfFaces; ++i) {
-                if (faceStatuses->GetValue(i) < 0) {
-                    removeVertices->InsertNextValue(i);
-                }
-            }
-
-            g->RemoveVertices(removeVertices);
-        }
-
-        cout << "vertex number : " << g->GetNumberOfVertices() << endl;
-        cout << "edge number : " << g->GetNumberOfEdges() << endl;
+    double* StartSegmentation(const vtkSmartPointer<vtkRenderWindowInteractor>& interactor) {
         numberOfFaces = g->GetNumberOfVertices();
 
         // start clustering
         vtkSmartPointer<vtkDoubleArray> meshDis = vtkDoubleArray::SafeDownCast(g->GetEdgeData()->GetArray("Weights"));
-        unordered_map<int, double*> distances;
+        double **distances;
         vtkIdType* clusterCenterIds = new vtkIdType[clusterCnt];
+        double *dur = new double[5];
+        clock_t begin, end;
 
-        vtkSmartPointer<vtkIntArray> faceStatuses = vtkIntArray::SafeDownCast(g->GetVertexData()->GetArray("Statuses"));
+        cout << "Step 3.1 : Computing approximate centers of each cluster . . ." << endl;
+        begin = clock();
         // get center of each cluster
         for (vtkIdType i = 0; i < clusterCnt; ++i) {
-            if (clusterStatuses[i] != STATUS_SELECT) {
-                clusterCenterIds[i] = -1;
-                continue;
-            }
-
-            vtkIdType tmpId;
-            getCenterFaceId(clusterFaceIds[i], centers, tmpId);
-            clusterCenterIds[i] = tmpId;
-
-            distances[tmpId] = getDijkstraTable(meshDis, tmpId, g);
+            double *centerCoordinate = computeCenterCoordinate(clusterFaceIds[i], centers);
+            clusterCenterIds[i] = getNearestFaceId(centerCoordinate, centers);
+            delete[] centerCoordinate;
         }
+        end = clock();
+        dur[0] = (end - begin) * 1.0 / CLOCKS_PER_SEC;
 
+        cout << "Step 3.2 : Computing dijkstra table of each cluster center . . ." << endl;
+        begin = clock();
+        distances = new double*[clusterCnt];
+        for (vtkIdType i = 0; i < clusterCnt; ++i) {
+            distances[i] = getDijkstraTable(meshDis, clusterCenterIds[i], g);
+        }
+        end = clock();
+        dur[1] = (end - begin) * 1.0 / CLOCKS_PER_SEC;
+
+        cout << "Step 3.3 : Computing the nearest cluster of each mesh . . ." << endl;
+        begin = clock();
         List<vtkIdType> *minDisIds = new List<vtkIdType>[clusterCnt];
         for (vtkIdType i = 0; i < numberOfFaces; ++i) {
             double minDis = DBL_MAX;
             vtkIdType minDisId;
             for (int j = 0; j < clusterCnt; ++j) {
-                if (clusterStatuses[j] != STATUS_SELECT) {
-                    continue;
-                }
-
-                if (distances[clusterCenterIds[j]][i] < minDis) {
-                    minDis = distances[clusterCenterIds[j]][i];
+                if (distances[j][i] < minDis) {
+                    minDis = distances[j][i];
                     minDisId = j;
                 }
             }
@@ -272,49 +261,47 @@ public:
                 minDisIds[minDisId].push_back(i);
             }
         }
+        end = clock();
+        dur[2] = (end - begin) * 1.0 / CLOCKS_PER_SEC;
 
+        cout << "Step 3.4 : Adding meshes belonging to each cluster . . ." << endl;
+        begin = clock();
         for (int i = 0; i < clusterCnt; ++i) {
-            if (clusterStatuses[i] != STATUS_SELECT) {
-                continue;
-            }
-
             vtkSmartPointer<vtkIdTypeArray> clusterFaceId = vtkSmartPointer<vtkIdTypeArray>::New();
             clusterFaceId->SetNumberOfComponents(1);
             clusterFaceIds[i] = clusterFaceId;
             for (List<vtkIdType>::iterator it = minDisIds[i].begin(); it != NULL; it = it->next) {
-                clusterFaceIds[i]->InsertNextValue(faceStatuses->GetValue(it->key));
+                clusterFaceIds[i]->InsertNextValue(it->key);
+                faceIdToClusterMap[it->key] = i;
             }
         }
+        end = clock();
+        dur[3] = (end - begin) * 1.0 / CLOCKS_PER_SEC;
 
+        cout << "Step 3.5 : Re-rendering clusters . . ." << endl;
+        begin = clock();
         // re-render clusters
         for (int i = 0; i < clusterCnt; ++i) {
-            if (clusterStatuses[i] != STATUS_SELECT) {
-                continue;
-            }
-
             clusterStatuses[i] = STATUS_ACTIVE;
             highlightFace(interactor, clusterFaceIds[i], clusterColors[i]);
         }
-
-        g = vtkSmartPointer<vtkMutableUndirectedGraph>::New();
-        g->DeepCopy(completeGraph);
-        faceStatuses = vtkIntArray::SafeDownCast(g->GetVertexData()->GetArray("Statuses"));
-        numberOfFaces = g->GetNumberOfVertices();
-
-        for (vtkIdType i = 0; i < numberOfFaces; ++i) {
-            faceStatuses->SetValue(i, -1);
-        }
+        end = clock();
+        dur[4] = (end - begin) * 1.0 / CLOCKS_PER_SEC;
 
         delete[] clusterCenterIds;
         delete[] minDisIds;
+        for (int i = 0; i < clusterCnt; ++i) {
+            delete[] distances[i];
+        }
+        delete[] distances;
 
-        printf("done!\n");
+        return dur;
     }
 
     void MergeClusters(int seedCnt, const vtkSmartPointer<vtkRenderWindowInteractor>& interactor) {
         // compute merging costs between clusters
-        vtkSmartPointer<vtkDoubleArray> edgeLens = vtkDoubleArray::SafeDownCast(completeGraph->GetEdgeData()->GetArray("EdgeLens"));
-        vtkSmartPointer<vtkDoubleArray> meshDis = vtkDoubleArray::SafeDownCast(completeGraph->GetEdgeData()->GetArray("Weights"));
+        vtkSmartPointer<vtkDoubleArray> edgeLens = vtkDoubleArray::SafeDownCast(g->GetEdgeData()->GetArray("EdgeLens"));
+        vtkSmartPointer<vtkDoubleArray> meshDis = vtkDoubleArray::SafeDownCast(g->GetEdgeData()->GetArray("Weights"));
         vtkSmartPointer<vtkEdgeListIterator> edgeIt = vtkSmartPointer<vtkEdgeListIterator>::New();
         double ***utilValues = new double**[seedCnt];
         for (int i = 0; i < seedCnt; ++i) {
@@ -329,17 +316,14 @@ public:
         unsigned char white[4] = { 255, 255, 255, 255 };
         while (edgeIt->HasNext()) {
             vtkEdgeType edge = edgeIt->Next();
-            unsigned char colorA[4], colorB[4];
-
-            faceColors->GetTupleValue(edge.Source, colorA);
-            faceColors->GetTupleValue(edge.Target, colorB);
-            if (equals(colorA, colorB) || equals(colorA, white) || equals(colorB, white)) {
-                continue;
-            }
 
             int clusterNumA, clusterNumB;
-            clusterNumA = colorToClusterIdMap[colorA];
-            clusterNumB = colorToClusterIdMap[colorB];
+            clusterNumA = faceIdToClusterMap[edge.Source];
+            clusterNumB = faceIdToClusterMap[edge.Target];
+
+            if (clusterNumA == clusterNumB || clusterNumA == -1 || clusterNumB == -1) {
+                continue;
+            }
 
             if (!utilValues[clusterNumA][clusterNumB]) {
                 utilValues[clusterNumA][clusterNumB] = new double[5];
@@ -380,7 +364,6 @@ public:
         }
 
         set<heapElem, heapElemComp> minHeap;
-        //List<heapElem> tmpList;
         for (int i = 0; i < seedCnt; ++i) {
             for (int j = 0; j < seedCnt; ++j) {
                 if (utilValues[i][j]) {
@@ -389,12 +372,10 @@ public:
                     utilValues[i][j][4] = (utilValues[i][j][0] / utilValues[i][j][1]) / (utilValues[i][j][2] / utilValues[i][j][3]);
                     if (i < j) {
                         minHeap.insert(make_pair(i * seedCnt + j, utilValues[i][j][4]));
-                        //tmpList.push_back(make_pair(i * seedCnt + j, utilValues[i][j][4]));
                     }
                 }
             }
         }
-        //MinHeap<heapElem, heapElemComp> minHeap(tmpList, seedCnt * seedCnt);
 
         // start merging
         clusterSteps = new int*[seedCnt];
@@ -405,7 +386,6 @@ public:
 
         int remainClusterCnt = seedCnt;
         while (remainClusterCnt > 2) {
-            //int tmp = minHeap.GetMinimum().first;
             int tmp = minHeap.begin()->first;
             int clusterNumA, clusterNumB;
 
@@ -430,8 +410,6 @@ public:
                     utilValues[i][clusterNumA][2] = utilValues[clusterNumA][i][2];
                     utilValues[i][clusterNumA][3] = utilValues[clusterNumA][i][3];
 
-                    //minHeap.DeleteKey(make_pair(computeHashValue(clusterNumA, i, seedCnt), utilValues[clusterNumA][i][4]));
-                    //minHeap.DeleteKey(make_pair(computeHashValue(clusterNumB, i, seedCnt), utilValues[clusterNumB][i][4]));
                     minHeap.erase(minHeap.find(make_pair(computeHashValue(clusterNumA, i, seedCnt), utilValues[clusterNumA][i][4])));
                     minHeap.erase(minHeap.find(make_pair(computeHashValue(clusterNumB, i, seedCnt), utilValues[clusterNumB][i][4])));
 
@@ -447,7 +425,6 @@ public:
                     utilValues[i][clusterNumA][2] = utilValues[clusterNumA][i][2];
                     utilValues[i][clusterNumA][3] = utilValues[clusterNumA][i][3];
 
-                    //minHeap.DeleteKey(make_pair(computeHashValue(clusterNumA, i, seedCnt), utilValues[clusterNumA][i][4]));
                     minHeap.erase(minHeap.find(make_pair(computeHashValue(clusterNumA, i, seedCnt), utilValues[clusterNumA][i][4])));
                 } else if (!utilValues[clusterNumA][i] && utilValues[clusterNumB][i]) {
                     utilValues[clusterNumA][i] = new double[5];
@@ -462,7 +439,6 @@ public:
                     utilValues[i][clusterNumA][2] = utilValues[clusterNumA][i][2];
                     utilValues[i][clusterNumA][3] = utilValues[clusterNumA][i][3];
 
-                    //minHeap.DeleteKey(make_pair(computeHashValue(clusterNumB, i, seedCnt), utilValues[clusterNumB][i][4]));
                     minHeap.erase(minHeap.find(make_pair(computeHashValue(clusterNumB, i, seedCnt), utilValues[clusterNumB][i][4])));
 
                     delete[] utilValues[clusterNumB][i];
@@ -479,11 +455,9 @@ public:
                     utilValues[clusterNumA][i][4] = (utilValues[clusterNumA][i][0] * utilValues[clusterNumA][i][3]) / (utilValues[clusterNumA][i][1] * utilValues[clusterNumA][i][2]);
                 }
                 utilValues[i][clusterNumA][4] = utilValues[clusterNumA][i][4];
-                //minHeap.InsertKey(make_pair(computeHashValue(clusterNumA, i, seedCnt), utilValues[clusterNumA][i][4]));
                 minHeap.insert(make_pair(computeHashValue(clusterNumA, i, seedCnt), utilValues[clusterNumA][i][4]));
             }
 
-            //minHeap.DeleteKey(make_pair(computeHashValue(clusterNumA, clusterNumB, seedCnt), utilValues[clusterNumA][clusterNumB][4]));
             minHeap.erase(make_pair(computeHashValue(clusterNumA, clusterNumB, seedCnt), utilValues[clusterNumA][clusterNumB][4]));
             delete[] utilValues[clusterNumA][clusterNumB];
             delete[] utilValues[clusterNumB][clusterNumA];
@@ -518,20 +492,72 @@ public:
     }
 
     void Selecting(const vtkSmartPointer<vtkCellPicker>& picker, const vtkSmartPointer<vtkRenderWindowInteractor>& interactor) {
-        vtkSmartPointer<vtkIdTypeArray>& ids = clusterFaceIds[currentCluster];
-        unsigned char* selectedColor = clusterColors[currentCluster];
+        unsigned char selectedColor[4] = { 0, 0, 0, 255 };
 
         vtkIdType pickId = picker->GetCellId();
         if (pickId != -1) {
-            unsigned char color[4] = { 255, 255, 255, 255 };
-            faceColors->GetTupleValue(pickId, color);
+            divideLineFaceIds->InsertNextValue(pickId);
+            highlightFace(interactor, divideLineFaceIds, selectedColor);
+        }
+    }
 
-            if (color[0] == 255 && color[1] == 255 && color[2] == 255) {
-                clusterStatuses[currentCluster] = STATUS_SELECT;
-                ids->InsertNextValue(pickId);
-                highlightFace(interactor, ids, selectedColor);
+    void clusterDivision() {
+        bool *isUsedMap = new bool[numberOfFaces];
+        memset(isUsedMap, 0, numberOfFaces * sizeof(bool));
+        int lineSize = 0;
+        for (int i = 0; i < divideLineFaceIds->GetNumberOfTuples(); ++i) {
+            if (!isUsedMap[divideLineFaceIds->GetValue(i)]) {
+                isUsedMap[divideLineFaceIds->GetValue(i)] = true;
+                ++lineSize;
             }
         }
+        divideLineFaceIds = vtkSmartPointer<vtkIdTypeArray>::New();
+
+        int *lineIds = new int[lineSize];
+        lineSize = 0;
+        for (int i = 0; i < numberOfFaces; ++i) {
+            if (isUsedMap[i]) {
+                lineIds[lineSize++] = i;
+            }
+        }
+        delete[] isUsedMap;
+
+        int *clusterMap = new int[clusterCnt];
+        memset(clusterMap, 0, clusterCnt * sizeof(int));
+        for (int i = 0; i < lineSize; ++i) {
+            clusterMap[faceIdToClusterMap[lineIds[i]]]++;
+        }
+
+        // compute two clusters who has the most and second most faces in the divide line
+        int clusterNumA, clusterNumB;
+        clusterNumA = 0;
+        clusterNumB = 1;
+        for (int i = 0; i < clusterCnt; ++i) {
+            if (clusterMap[i] > clusterMap[clusterNumA]) {
+                clusterNumB = clusterNumA;
+                clusterNumA = i;
+            } else if (clusterMap[i] < clusterMap[clusterNumA] && clusterMap[i] > clusterMap[clusterNumB]) {
+                clusterNumB = i;
+            }
+        }
+        
+        DisjointSet S(numberOfFaces);
+        for (int i = 0; i < clusterFaceIds[clusterNumA]->GetNumberOfTuples(); ++i) {
+            S.MakeSet(clusterFaceIds[clusterNumA]->GetValue(i));
+        }
+
+        vtkSmartPointer<vtkEdgeListIterator> edgeIt = vtkSmartPointer<vtkEdgeListIterator>::New();
+        g->GetEdges(edgeIt);
+        while (edgeIt->HasNext()) {
+            vtkEdgeType edge = edgeIt->Next();
+            if (faceIdToClusterMap[edge.Source] == clusterNumA && faceIdToClusterMap[edge.Target] == clusterNumA) {
+                if (S.FindSet(edge.Source) != S.FindSet(edge.Target)) {
+                    S.Union(edge.Source, edge.Target);
+                }
+            }
+        }
+
+
     }
 
     int HighlightCluster(const vtkSmartPointer<vtkCellPicker>& picker, const vtkSmartPointer<vtkRenderWindowInteractor>& interactor, int lastClusterId, int beginClusterId) {
@@ -569,24 +595,6 @@ public:
         highlightFace(interactor, clusterFaceIds[clusterId], clusterColors[colorHashMap[clusterId]]);
     }
 
-    /*void ResetCluster(const vtkSmartPointer<vtkRenderWindowInteractor>& interactor, int clusterId) {
-        if (clusterId != -1) {
-            clusterStatuses[clusterId] = STATUS_NONE;
-            unsigned char color[4] = { 255, 255, 255, 255 };
-            highlightFace(interactor, clusterFaceIds[clusterId], color);
-
-            vtkSmartPointer<vtkIntArray> faceStatuses = vtkIntArray::SafeDownCast(g->GetVertexData()->GetArray("Statuses"));
-            cout << "Cluster " << clusterId << " has " << clusterFaceIds[clusterId]->GetNumberOfTuples() << " faces.\n";
-            for (vtkIdType i = 0; i < clusterFaceIds[clusterId]->GetNumberOfTuples(); ++i) {
-                faceStatuses->SetValue(clusterFaceIds[clusterId]->GetValue(i), clusterFaceIds[clusterId]->GetValue(i));
-            }
-
-            vtkSmartPointer<vtkIdTypeArray> clusterFaceId = vtkSmartPointer<vtkIdTypeArray>::New();
-            clusterFaceId->SetNumberOfComponents(1);
-            clusterFaceIds[clusterId] = clusterFaceId;
-        }
-    }*/
-
 private:
     int computeHashValue(int a, int b, int seedCnt) {
         if (a < b) {
@@ -594,24 +602,6 @@ private:
         } else {
             return b * seedCnt + a;
         }
-    }
-
-    void convertPolydataToDualGraph() {
-        vtkSmartPointer<vtkConvertToDualGraph> convert = vtkSmartPointer<vtkConvertToDualGraph>::New();
-        convert->SetInputData(Data);
-        convert->Update();
-
-        completeGraph = vtkSmartPointer<vtkMutableUndirectedGraph>::New();
-        completeGraph->ShallowCopy(vtkMutableUndirectedGraph::SafeDownCast(convert->GetOutput()));
-
-        vtkSmartPointer<vtkIntArray> faceStatuses = vtkSmartPointer<vtkIntArray>::New();
-        faceStatuses->SetNumberOfComponents(1);
-        faceStatuses->SetNumberOfValues(numberOfFaces);
-        faceStatuses->SetName("Statuses");
-        for (vtkIdType i = 0; i < numberOfFaces; ++i) {
-            faceStatuses->SetValue(i, i);
-        }
-        completeGraph->GetVertexData()->AddArray(faceStatuses);
     }
 
     double* getDijkstraTable(const vtkSmartPointer<vtkDoubleArray>& meshDis, int faceId, const vtkSmartPointer<vtkMutableUndirectedGraph>& g) {
@@ -629,7 +619,8 @@ private:
         }
         distances[faceId] = 0.0;
 
-        unordered_map<int, bool> S;
+        bool *S = new bool[numberOfFaces];
+        memset(S, 0, numberOfFaces * sizeof(bool));
         S[faceId] = true;
 
         heapElem *disPairs = new heapElem[numberOfFaces];
@@ -665,6 +656,8 @@ private:
             }
         }
 
+        delete[] S;
+
         return distances;
     }
 
@@ -677,8 +670,12 @@ private:
         interactor->GetRenderWindow()->Render();
     }
 
-    void getCenterFaceId(const vtkSmartPointer<vtkIdTypeArray>& ids, const vtkSmartPointer<vtkDoubleArray>& centers, vtkIdType& centerId) {
-        double center[3] = { 0.0, 0.0, 0.0 };
+    double* computeCenterCoordinate(const vtkSmartPointer<vtkIdTypeArray>& ids, const vtkSmartPointer<vtkDoubleArray>& centers) {
+        double *center = new double[3];
+        center[0] = 0.0;
+        center[1] = 0.0;
+        center[2] = 0.0;
+
         for (vtkIdType i = 0; i < ids->GetNumberOfTuples(); ++i) {
             int faceId = ids->GetValue(i);
             center[0] += centers->GetTuple(faceId)[0];
@@ -690,16 +687,22 @@ private:
         center[1] /= ids->GetNumberOfTuples();
         center[2] /= ids->GetNumberOfTuples();
 
-        vtkSmartPointer<vtkIntArray> faceStatuses = vtkIntArray::SafeDownCast(g->GetVertexData()->GetArray("Statuses"));
+        return center;
+    }
+
+    vtkIdType getNearestFaceId(double* center, const vtkSmartPointer<vtkDoubleArray>& centers) {
+        vtkIdType centerId;
         double minDis = DBL_MAX;
-        for (vtkIdType i = 0; i < g->GetNumberOfVertices(); ++i) {
-            int faceId = faceStatuses->GetValue(i);
-            double dis = vtkMath::Distance2BetweenPoints(center, centers->GetTuple(faceId));
+
+        for (vtkIdType i = 0; i < numberOfFaces; ++i) {
+            double dis = vtkMath::Distance2BetweenPoints(center, centers->GetTuple(i));
             if (dis < minDis) {
                 minDis = dis;
                 centerId = i;
             }
         }
+
+        return centerId;
     }
 
     int getClusterIdByColor(unsigned char *color, int upperBound) {
