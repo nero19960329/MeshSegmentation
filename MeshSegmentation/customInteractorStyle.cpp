@@ -8,6 +8,8 @@ customInteractorStyle::customInteractorStyle() {
     isRightButtonDown = false;
     isHideButtonDown = false;
     lastClusterId = -1;
+    beginClusterId = -1;
+    endClusterId = -1;
 }
 
 void customInteractorStyle::SetUIManager(UserInteractionManager* manager) {
@@ -23,19 +25,46 @@ void customInteractorStyle::OnLeftButtonDown() {
 void customInteractorStyle::OnLeftButtonUp() {
     isLeftButtonDown = false;
 
-    if (isHideButtonDown) {
-        uiManager->ResetCluster(this->Interactor, lastClusterId);
-    }
-
     vtkInteractorStyleTrackballCamera::OnLeftButtonUp();
 }
 
 void customInteractorStyle::OnRightButtonDown() {
     isRightButtonDown = true;
+
+    if (isHideButtonDown) {
+        int *pos = this->GetInteractor()->GetEventPosition();
+
+        vtkSmartPointer<vtkCellPicker> picker = vtkSmartPointer<vtkCellPicker>::New();
+        picker->SetTolerance(0.00001);
+        picker->Pick(pos[0], pos[1], 0, this->GetDefaultRenderer());
+
+        lastClusterId = uiManager->HighlightCluster(picker, this->Interactor, lastClusterId, beginClusterId);
+        beginClusterId = lastClusterId;
+    }
 }
 
 void customInteractorStyle::OnRightButtonUp() {
     isRightButtonDown = false;
+
+    int *pos = this->GetInteractor()->GetEventPosition();
+
+    vtkSmartPointer<vtkCellPicker> picker = vtkSmartPointer<vtkCellPicker>::New();
+    picker->SetTolerance(0.00001);
+    picker->Pick(pos[0], pos[1], 0, this->GetDefaultRenderer());
+
+    endClusterId = uiManager->HighlightCluster(picker, this->Interactor, lastClusterId, beginClusterId);
+
+    if (isHideButtonDown) {
+        if (beginClusterId == -1 && endClusterId == -1) {
+            return;
+        } else if (beginClusterId != endClusterId && beginClusterId != -1 && endClusterId != -1) {
+            uiManager->ManualMergeClusters(beginClusterId, endClusterId, this->Interactor);
+        } else if (beginClusterId != -1) {
+            uiManager->HighlightFace(beginClusterId, this->Interactor);
+        } else {
+            uiManager->HighlightFace(endClusterId, this->Interactor);
+        }
+    }
 }
 
 void customInteractorStyle::OnMouseMove() {
@@ -46,15 +75,9 @@ void customInteractorStyle::OnMouseMove() {
         picker->SetTolerance(0.00001);
         picker->Pick(pos[0], pos[1], 0, this->GetDefaultRenderer());
 
-        uiManager->Selecting(picker, this->Interactor);
-    } else if (isHideButtonDown && !isLeftButtonDown) {
-        int *pos = this->GetInteractor()->GetEventPosition();
-
-        vtkSmartPointer<vtkCellPicker> picker = vtkSmartPointer<vtkCellPicker>::New();
-        picker->SetTolerance(0.00001);
-        picker->Pick(pos[0], pos[1], 0, this->GetDefaultRenderer());
-
-        lastClusterId = uiManager->HightlightCluster(picker, this->Interactor, lastClusterId);
+        if (isHideButtonDown) {
+            lastClusterId = uiManager->HighlightCluster(picker, this->Interactor, lastClusterId, beginClusterId);
+        }
     }
 
     vtkInteractorStyleTrackballCamera::OnMouseMove();

@@ -18,14 +18,14 @@ vtkStandardNewMacro(customInteractorStyle);
 QVTKModelViewer::QVTKModelViewer(QWidget *parent) : QVTKWidget(parent) {}
 
 UserInteractionManager* QVTKModelViewer::RenderModel(string inputFileName) {
+    cout << "Opening " << inputFileName << " . . .\n";
+
     vtkSmartPointer<vtkSTLReader> reader = vtkSmartPointer<vtkSTLReader>::New();
     reader->SetFileName(inputFileName.c_str());
     reader->Update();
 
     vtkSmartPointer<vtkPolyData> mesh = reader->GetOutput();
     vtkIdType numberOfFaces = mesh->GetNumberOfCells();
-
-    cout << "numberOfFaces : " << numberOfFaces << endl;
 
     vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
     mapper->SetInputConnection(reader->GetOutputPort());

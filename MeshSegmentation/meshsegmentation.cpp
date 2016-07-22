@@ -44,13 +44,14 @@ MeshSegmentation::MeshSegmentation(QWidget *parent) : QMainWindow(parent) {
 
     /* ============================================================================= */
 
-    /* ================================ Other actions ================================ */
+    /* ================================ Other operations ================================ */
 
     clusterNumSlider->setMinimum(2);
     clusterNumSlider->setMaximum(seedCnt);
     clusterNumSlider->setValue(seedCnt);
     clusterNumSlider->setTickInterval(1);
     clusterNumSlider->setTickPosition(QSlider::TicksBelow);
+    clusterNumSlider->setDisabled(true);
 
     currentColorLabel->setStyleSheet("background-color : rgb(0, 0, 0);");
 
@@ -67,7 +68,7 @@ MeshSegmentation::MeshSegmentation(QWidget *parent) : QMainWindow(parent) {
 
     widget->setLayout(mainLayout);
 
-    /* =============================================================================== */
+    /* ================================================================================== */
 
     this->setCentralWidget(widget);
     this->setFixedSize(900, 800);
@@ -89,6 +90,9 @@ void MeshSegmentation::SetModelFileName() {
     uiManager = modelViewer->RenderModel(path.toStdString());
     colors = uiManager->GetColors();
 
+    resetButton->setText(tr("Set Reset Mode Open"));
+    modelViewer->style->isHideButtonDown = false;
+
     QString tmpStr;
     for (int i = colorNum - 1; i >= 0; --i) {
         unsigned char *color = colors[i];
@@ -105,10 +109,33 @@ void MeshSegmentation::SetBrushColor(int k) {
 }
 
 void MeshSegmentation::StartSegmentation() {
+    double dur[3];
+    clock_t begin, end;
+
+    cout << "Step 1 : Automatic selecting seeds . . ." << endl;
+    begin = clock();
     uiManager->AutomaticSelectSeeds(seedCnt, modelViewer->GetInteractor());
+    end = clock();
+    dur[0] = (end - begin) * 1.0 / CLOCKS_PER_SEC;
+
+    cout << "Step 2 : Segmenting . . ." << endl;
+    begin = clock();
     uiManager->StartSegmentation(modelViewer->GetInteractor());
+    end = clock();
+    dur[1] = (end - begin) * 1.0 / CLOCKS_PER_SEC;
+
+    cout << "Step3 : Merging clusters . . ." << endl;
+    begin = clock();
     uiManager->MergeClusters(seedCnt, modelViewer->GetInteractor());
+    end = clock();
+    dur[2] = (end - begin) * 1.0 / CLOCKS_PER_SEC;
+
+    cout << "time 1 : " << dur[0] << "s" << endl;
+    cout << "time 2 : " << dur[1] << "s" << endl;
+    cout << "time 3 : " << dur[2] << "s" << endl;
+
     clusterNumSlider->setValue(seedCnt);
+    clusterNumSlider->setDisabled(false);
 }
 
 void MeshSegmentation::SetResetMode() {
@@ -118,6 +145,8 @@ void MeshSegmentation::SetResetMode() {
         resetButton->setText(tr("Set Reset Mode Open"));
         tmp = false;
     } else {
+        clusterNumSlider->setDisabled(true);
+        uiManager->ConfirmClusterSegmentation(seedCnt, currentClusterNum);
         resetButton->setText(tr("Set Reset Mode Close"));
         tmp = true;
     }
@@ -128,6 +157,6 @@ void MeshSegmentation::SetClusterNum(int k) {
 }
 
 void MeshSegmentation::DisplayCluster() {
-    uiManager->SetClusterNum(seedCnt, currentClusterNum, modelViewer->GetInteractor());
+    uiManager->SetClusterStep(seedCnt, currentClusterNum, modelViewer->GetInteractor());
 
 }

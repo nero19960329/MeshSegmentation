@@ -14,6 +14,7 @@ public:
 
 private:
     int lastClusterId;
+    int beginClusterId, endClusterId;
 
 public:
     static customInteractorStyle* New();

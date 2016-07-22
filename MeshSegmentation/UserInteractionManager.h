@@ -1,12 +1,7 @@
 #pragma once
 
-#include <vtkActor.h>
-#include <vtkCamera.h>
-#include <vtkCell.h>
 #include <vtkCellData.h>
 #include <vtkCellPicker.h>
-#include <vtkDataSet.h>
-#include <vtkDataSetMapper.h>
 #include <vtkDoubleArray.h>
 #include <vtkEdgeListIterator.h>
 #include <vtkExtractSelection.h>
@@ -16,28 +11,18 @@
 #include <vtkMutableUndirectedGraph.h>
 #include <vtkPolyData.h>
 #include <vtkPolyDataNormals.h>
-#include <vtkPolyDataMapper.h>
-#include <vtkProperty.h>
-#include <vtkRenderer.h>
-#include <vtkRendererCollection.h>
 #include <vtkRenderWindow.h>
 #include <vtkRenderWindowInteractor.h>
-#include <vtkSelection.h>
-#include <vtkSelectionNode.h>
 #include <vtkSmartPointer.h>
-#include <vtkSTLReader.h>
-#include <vtkTriangle.h>
 #include <vtkUnsignedCharArray.h>
-#include <vtkUnstructuredGrid.h>
 
-#include <algorithm>
 #include <stdio.h>
 
-#include <list>
 #include <set>
 #include <unordered_map>
-#include <vector>
 
+#include "List.h"
+#include "MinHeap.h"
 #include "Utils.h"
 #include "vtkConvertToDualGraph.h"
 
@@ -78,6 +63,7 @@ private:
     int clusterCnt, currentCluster;
     int *clusterStatuses;
     unsigned char **clusterColors;
+    unordered_map<int, int> colorHashMap;
     unordered_map<unsigned char*, int, UnsignedCharHashFunc, UnsignedCharCmpFunc> colorToClusterIdMap;
     vtkSmartPointer<vtkIdTypeArray> *clusterFaceIds;
     vtkSmartPointer<vtkUnsignedCharArray> faceColors;
@@ -110,6 +96,10 @@ public:
             colorToClusterIdMap[clusterColor] = i;
             h += goldenRatio;
             h -= floor(h);
+        }
+
+        for (int i = 0; i < clusterCnt; ++i) {
+            colorHashMap[i] = i;
         }
 
         clusterStatuses = new int[clusterCnt];
@@ -154,10 +144,47 @@ public:
         currentCluster = k;
     }
 
-    void SetClusterNum(int seedCnt, int k, const vtkSmartPointer<vtkRenderWindowInteractor>& interactor) {
+    void SetClusterStep(int seedCnt, int k, const vtkSmartPointer<vtkRenderWindowInteractor>& interactor) {
+        colorHashMap.clear();
+
+        int cnt = 0;
         for (int i = 0; i < seedCnt; ++i) {
-            highlightFace(interactor, clusterFaceIds[i], clusterColors[clusterSteps[seedCnt - k][i]]);
+            unordered_map<int, int>::iterator colorIt = colorHashMap.find(clusterSteps[seedCnt - k][i]);
+
+            if (colorIt == colorHashMap.end()) {
+                highlightFace(interactor, clusterFaceIds[i], clusterColors[cnt]);
+                colorHashMap[clusterSteps[seedCnt - k][i]] = cnt++;
+            } else {
+                highlightFace(interactor, clusterFaceIds[i], clusterColors[colorIt->second]);
+            }
         }
+    }
+
+    void ConfirmClusterSegmentation(int seedCnt, int k) {
+        for (int i = 0; i < seedCnt; ++i) {
+            int clusterId = clusterSteps[seedCnt - k][i];
+
+            if (!clusterFaceIds[i]) {
+                return;
+            }
+
+            if (clusterId != i) {
+                for (int j = 0; j < clusterFaceIds[i]->GetNumberOfTuples(); ++j) {
+                    clusterFaceIds[clusterId]->InsertNextValue(clusterFaceIds[i]->GetValue(j));
+                }
+                clusterFaceIds[i] = NULL;
+                clusterStatuses[i] = STATUS_NONE;
+            }
+        }
+    }
+
+    void ManualMergeClusters(int beginClusterId, int endClusterId, const vtkSmartPointer<vtkRenderWindowInteractor>& interactor) {
+        for (int i = 0; i < clusterFaceIds[endClusterId]->GetNumberOfTuples(); ++i) {
+            clusterFaceIds[beginClusterId]->InsertNextValue(clusterFaceIds[endClusterId]->GetValue(i));
+        }
+        clusterFaceIds[endClusterId] = NULL;
+        clusterStatuses[endClusterId] = STATUS_NONE;
+        highlightFace(interactor, clusterFaceIds[beginClusterId], clusterColors[colorHashMap[beginClusterId]]);
     }
 
     void AutomaticSelectSeeds(int seedCnt, const vtkSmartPointer<vtkRenderWindowInteractor>& interactor) {
@@ -226,7 +253,7 @@ public:
             distances[tmpId] = getDijkstraTable(meshDis, tmpId, g);
         }
 
-        vector<vtkIdType> *minDisIds = new vector<vtkIdType>[clusterCnt];
+        List<vtkIdType> *minDisIds = new List<vtkIdType>[clusterCnt];
         for (vtkIdType i = 0; i < numberOfFaces; ++i) {
             double minDis = DBL_MAX;
             vtkIdType minDisId;
@@ -254,8 +281,8 @@ public:
             vtkSmartPointer<vtkIdTypeArray> clusterFaceId = vtkSmartPointer<vtkIdTypeArray>::New();
             clusterFaceId->SetNumberOfComponents(1);
             clusterFaceIds[i] = clusterFaceId;
-            for (auto faceId : minDisIds[i]) {
-                clusterFaceIds[i]->InsertNextValue(faceStatuses->GetValue(faceId));
+            for (List<vtkIdType>::iterator it = minDisIds[i].begin(); it != NULL; it = it->next) {
+                clusterFaceIds[i]->InsertNextValue(faceStatuses->GetValue(it->key));
             }
         }
 
@@ -353,6 +380,7 @@ public:
         }
 
         set<heapElem, heapElemComp> minHeap;
+        //List<heapElem> tmpList;
         for (int i = 0; i < seedCnt; ++i) {
             for (int j = 0; j < seedCnt; ++j) {
                 if (utilValues[i][j]) {
@@ -361,10 +389,12 @@ public:
                     utilValues[i][j][4] = (utilValues[i][j][0] / utilValues[i][j][1]) / (utilValues[i][j][2] / utilValues[i][j][3]);
                     if (i < j) {
                         minHeap.insert(make_pair(i * seedCnt + j, utilValues[i][j][4]));
+                        //tmpList.push_back(make_pair(i * seedCnt + j, utilValues[i][j][4]));
                     }
                 }
             }
         }
+        //MinHeap<heapElem, heapElemComp> minHeap(tmpList, seedCnt * seedCnt);
 
         // start merging
         clusterSteps = new int*[seedCnt];
@@ -375,47 +405,20 @@ public:
 
         int remainClusterCnt = seedCnt;
         while (remainClusterCnt > 2) {
+            //int tmp = minHeap.GetMinimum().first;
             int tmp = minHeap.begin()->first;
             int clusterNumA, clusterNumB;
 
             clusterNumA = tmp / seedCnt;
             clusterNumB = tmp % seedCnt;
 
-            // pick the color that make the most difference between itself and its neighbors
-            list<int> neighborIds;
-            double minColorDifA, minColorDifB;
-            minColorDifA = DBL_MAX;
-            minColorDifB = DBL_MAX;
+            sumValues[clusterNumA][0] = utilValues[clusterNumA][clusterNumB][2];
+            sumValues[clusterNumA][1] = utilValues[clusterNumA][clusterNumB][3];
             for (int i = 0; i < seedCnt; ++i) {
                 if (i == clusterNumA || i == clusterNumB) {
                     continue;
                 }
 
-                double tmpDis;
-                if (utilValues[clusterNumA][i] || utilValues[clusterNumB][i]) {
-                    neighborIds.push_back(i);
-
-                    tmpDis = distanceBetweenVectors(clusterColors[clusterNumA], clusterColors[i]);
-                    if (minColorDifA > tmpDis) {
-                        minColorDifA = tmpDis;
-                    }
-
-                    tmpDis = distanceBetweenVectors(clusterColors[clusterNumB], clusterColors[i]);
-                    if (minColorDifB > tmpDis) {
-                        minColorDifB = tmpDis;
-                    }
-                }
-            }
-
-            if (minColorDifA < minColorDifB) {
-                swap(clusterNumA, clusterNumB);
-            }
-
-            //printf("c(%d, %d) = %.3lf\n", clusterNumA, clusterNumB, minHeap.begin()->second);
-
-            sumValues[clusterNumA][0] = utilValues[clusterNumA][clusterNumB][2];
-            sumValues[clusterNumA][1] = utilValues[clusterNumA][clusterNumB][3];
-            for (auto i : neighborIds) {
                 if (utilValues[clusterNumA][i] && utilValues[clusterNumB][i]) {
                     utilValues[clusterNumA][i][0] += utilValues[clusterNumB][i][0];
                     utilValues[clusterNumA][i][1] += utilValues[clusterNumB][i][1];
@@ -427,6 +430,8 @@ public:
                     utilValues[i][clusterNumA][2] = utilValues[clusterNumA][i][2];
                     utilValues[i][clusterNumA][3] = utilValues[clusterNumA][i][3];
 
+                    //minHeap.DeleteKey(make_pair(computeHashValue(clusterNumA, i, seedCnt), utilValues[clusterNumA][i][4]));
+                    //minHeap.DeleteKey(make_pair(computeHashValue(clusterNumB, i, seedCnt), utilValues[clusterNumB][i][4]));
                     minHeap.erase(minHeap.find(make_pair(computeHashValue(clusterNumA, i, seedCnt), utilValues[clusterNumA][i][4])));
                     minHeap.erase(minHeap.find(make_pair(computeHashValue(clusterNumB, i, seedCnt), utilValues[clusterNumB][i][4])));
 
@@ -442,6 +447,7 @@ public:
                     utilValues[i][clusterNumA][2] = utilValues[clusterNumA][i][2];
                     utilValues[i][clusterNumA][3] = utilValues[clusterNumA][i][3];
 
+                    //minHeap.DeleteKey(make_pair(computeHashValue(clusterNumA, i, seedCnt), utilValues[clusterNumA][i][4]));
                     minHeap.erase(minHeap.find(make_pair(computeHashValue(clusterNumA, i, seedCnt), utilValues[clusterNumA][i][4])));
                 } else if (!utilValues[clusterNumA][i] && utilValues[clusterNumB][i]) {
                     utilValues[clusterNumA][i] = new double[5];
@@ -456,6 +462,7 @@ public:
                     utilValues[i][clusterNumA][2] = utilValues[clusterNumA][i][2];
                     utilValues[i][clusterNumA][3] = utilValues[clusterNumA][i][3];
 
+                    //minHeap.DeleteKey(make_pair(computeHashValue(clusterNumB, i, seedCnt), utilValues[clusterNumB][i][4]));
                     minHeap.erase(minHeap.find(make_pair(computeHashValue(clusterNumB, i, seedCnt), utilValues[clusterNumB][i][4])));
 
                     delete[] utilValues[clusterNumB][i];
@@ -472,9 +479,11 @@ public:
                     utilValues[clusterNumA][i][4] = (utilValues[clusterNumA][i][0] * utilValues[clusterNumA][i][3]) / (utilValues[clusterNumA][i][1] * utilValues[clusterNumA][i][2]);
                 }
                 utilValues[i][clusterNumA][4] = utilValues[clusterNumA][i][4];
+                //minHeap.InsertKey(make_pair(computeHashValue(clusterNumA, i, seedCnt), utilValues[clusterNumA][i][4]));
                 minHeap.insert(make_pair(computeHashValue(clusterNumA, i, seedCnt), utilValues[clusterNumA][i][4]));
             }
 
+            //minHeap.DeleteKey(make_pair(computeHashValue(clusterNumA, clusterNumB, seedCnt), utilValues[clusterNumA][clusterNumB][4]));
             minHeap.erase(make_pair(computeHashValue(clusterNumA, clusterNumB, seedCnt), utilValues[clusterNumA][clusterNumB][4]));
             delete[] utilValues[clusterNumA][clusterNumB];
             delete[] utilValues[clusterNumB][clusterNumA];
@@ -525,17 +534,17 @@ public:
         }
     }
 
-    int HightlightCluster(const vtkSmartPointer<vtkCellPicker>& picker, const vtkSmartPointer<vtkRenderWindowInteractor>& interactor, int lastClusterId) {
+    int HighlightCluster(const vtkSmartPointer<vtkCellPicker>& picker, const vtkSmartPointer<vtkRenderWindowInteractor>& interactor, int lastClusterId, int beginClusterId) {
         vtkIdType pickId = picker->GetCellId();
         if (pickId != -1) {
             unsigned char color[4] = { 255, 255, 255, 255 };
             faceColors->GetTupleValue(pickId, color);
 
             if (lastClusterId >= 0 && clusterStatuses[lastClusterId] == STATUS_ACTIVE) {
-                if (equals(color, clusterColors[lastClusterId], 1.2)) {
+                if (equals(color, clusterColors[colorHashMap[lastClusterId]], 1.2)) {
                     return lastClusterId;
-                } else {
-                    highlightFace(interactor, clusterFaceIds[lastClusterId], clusterColors[lastClusterId]);
+                } else if (lastClusterId != beginClusterId) {
+                    highlightFace(interactor, clusterFaceIds[lastClusterId], clusterColors[colorHashMap[lastClusterId]]);
                 }
             }
 
@@ -549,14 +558,18 @@ public:
             highlightFace(interactor, clusterFaceIds[clusterId], tmpColor);
 
             return clusterId;
-        } else if (lastClusterId >= 0 && clusterStatuses[lastClusterId] == STATUS_ACTIVE) {
-            highlightFace(interactor, clusterFaceIds[lastClusterId], clusterColors[lastClusterId]);
+        } else if (lastClusterId >= 0 && lastClusterId != beginClusterId && clusterStatuses[lastClusterId] == STATUS_ACTIVE) {
+            highlightFace(interactor, clusterFaceIds[lastClusterId], clusterColors[colorHashMap[lastClusterId]]);
         }
 
         return -1;
     }
 
-    void ResetCluster(const vtkSmartPointer<vtkRenderWindowInteractor>& interactor, int clusterId) {
+    void HighlightFace(int clusterId, const vtkSmartPointer<vtkRenderWindowInteractor>& interactor) {
+        highlightFace(interactor, clusterFaceIds[clusterId], clusterColors[colorHashMap[clusterId]]);
+    }
+
+    /*void ResetCluster(const vtkSmartPointer<vtkRenderWindowInteractor>& interactor, int clusterId) {
         if (clusterId != -1) {
             clusterStatuses[clusterId] = STATUS_NONE;
             unsigned char color[4] = { 255, 255, 255, 255 };
@@ -572,7 +585,7 @@ public:
             clusterFaceId->SetNumberOfComponents(1);
             clusterFaceIds[clusterId] = clusterFaceId;
         }
-    }
+    }*/
 
 private:
     int computeHashValue(int a, int b, int seedCnt) {
@@ -603,7 +616,6 @@ private:
 
     double* getDijkstraTable(const vtkSmartPointer<vtkDoubleArray>& meshDis, int faceId, const vtkSmartPointer<vtkMutableUndirectedGraph>& g) {
         double *distances = new double[numberOfFaces];
-        set<heapElem, heapElemComp> minHeap;
 
         // initialize distance
         for (vtkIdType j = 0; j < numberOfFaces; ++j) {
@@ -620,17 +632,17 @@ private:
         unordered_map<int, bool> S;
         S[faceId] = true;
 
+        heapElem *disPairs = new heapElem[numberOfFaces];
         for (int j = 0; j < numberOfFaces; ++j) {
-            if (faceId == j) {
-                continue;
-            }
-            minHeap.insert(make_pair(j, distances[j]));
+            disPairs[j] = make_pair(j, distances[j]);
         }
 
-        while (minHeap.size()) {
+        MinHeap<heapElem, heapElemComp> minHeap(disPairs, numberOfFaces);
+        minHeap.ExtractMin();
+
+        while (minHeap.Size()) {
             // u = EXTRACT_MIN(Q)
-            vtkIdType u = minHeap.begin()->first;
-            minHeap.erase(minHeap.begin());
+            vtkIdType u = minHeap.ExtractMin().first;
 
             // S <- S union {u}
             S[u] = true;
@@ -647,9 +659,8 @@ private:
 
                 double tmp = distances[u] + meshDis->GetValue(uEdge.Id);
                 if (distances[v] > tmp) {
-                    minHeap.erase(minHeap.find(make_pair(v, distances[v])));
                     distances[v] = tmp;
-                    minHeap.insert(make_pair(v, distances[v]));
+                    minHeap.DecreaseKey(make_pair(v, tmp));
                 }
             }
         }
@@ -693,7 +704,7 @@ private:
 
     int getClusterIdByColor(unsigned char *color, int upperBound) {
         for (int i = 0; i < upperBound; ++i) {
-            if (equals(color, clusterColors[i])) {
+            if (equals(color, clusterColors[colorHashMap[i]])) {
                 return i;
             }
         }
