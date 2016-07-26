@@ -1,5 +1,7 @@
 #include "meshsegmentation.h"
 
+#include <QFileDialog>
+
 #include <iostream>
 
 using namespace std;
@@ -21,7 +23,6 @@ MeshSegmentation::MeshSegmentation(QWidget *parent) : QMainWindow(parent) {
     divideButton = new QPushButton(tr("Open Divide Mode"));
     clusterNumSlider = new QSlider(Qt::Horizontal);
     uiManager = NULL;
-    colors = NULL;
     
     /* =============================================================================== */
 
@@ -75,7 +76,6 @@ void MeshSegmentation::SetModelFileName() {
         delete uiManager;
     }
     uiManager = modelViewer->RenderModel(path.toStdString());
-    colors = uiManager->GetColors();
 
     mergeButton->setText(tr("Open Merge Mode"));
     divideButton->setText(tr("Open Divide Mode"));
@@ -134,6 +134,8 @@ void MeshSegmentation::StartSegmentation() {
 
     clusterNumSlider->setValue(seedCnt);
     clusterNumSlider->setDisabled(false);
+
+    delete[] dur_2;
 }
 
 void MeshSegmentation::SetMergeMode() {

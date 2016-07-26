@@ -4,13 +4,10 @@
 #include <QtWidgets/QMainWindow>
 #include "ui_meshsegmentation.h"
 
-#include <QFileDialog>
 #include <QGridLayout>
-#include <QHBoxLayout>
 #include <QLabel>
 #include <QPushButton>
 #include <QString>
-#include <QVBoxLayout>
 #include <QVTKWidget.h>
 #include <QWidget>
 
@@ -31,7 +28,6 @@ private:
     int colorNum;
     int modelViewerLen;
     QString path;
-    unsigned char **colors;
 
     QWidget *widget;
     QVTKModelViewer *modelViewer;

@@ -2,20 +2,6 @@
 
 #include <cmath>
 
-double distanceBetweenVectors(unsigned char a[4], unsigned char b[4]) {
-    double tmp = 0.0;
-    for (int i = 0; i < 4; ++i) {
-        tmp += (a[i] - b[i]) * (a[i] - b[i]);
-    }
-    return sqrt(tmp);
-}
-
-bool equals(unsigned char a[4], unsigned char b[4], double k) {
-    return ((unsigned char)(b[0] * k) == a[0]) && 
-        ((unsigned char)(b[1] * k) == a[1]) && 
-        ((unsigned char)(b[2] * k) == a[2]);
-}
-
 unsigned char* HSVtoRGB(double h, double s, double v) {
     h *= 360.0;
 
@@ -58,6 +44,8 @@ unsigned char* HSVtoRGB(double h, double s, double v) {
     res[1] = (unsigned char)(tmpArray[1] * 256);
     res[2] = (unsigned char)(tmpArray[2] * 256);
     res[3] = 255;
+
+    delete[] tmpArray;
 
     return res;
 }

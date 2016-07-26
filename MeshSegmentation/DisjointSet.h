@@ -30,7 +30,7 @@ public:
         link(FindSet(x), FindSet(y));
     }
 
-    int FindSet(int x) {
+    int FindSet(int x) const {
         if (x != p[x]) {
             p[x] = FindSet(p[x]);
         }

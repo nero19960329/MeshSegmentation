@@ -11,6 +11,8 @@ customInteractorStyle::customInteractorStyle() {
     lastClusterId = -1;
     beginClusterId = -1;
     endClusterId = -1;
+    divMap = NULL;
+    S = NULL;
 }
 
 void customInteractorStyle::SetUIManager(UserInteractionManager* manager) {
@@ -41,8 +43,6 @@ void customInteractorStyle::OnRightButtonDown() {
 
         lastClusterId = uiManager->HighlightCluster(picker, this->Interactor, lastClusterId, beginClusterId);
         beginClusterId = lastClusterId;
-    } else if (isDivideButtonDown) {
-
     }
 }
 
@@ -59,7 +59,6 @@ void customInteractorStyle::OnRightButtonUp() {
         endClusterId = uiManager->HighlightCluster(picker, this->Interactor, lastClusterId, beginClusterId);
 
         if (beginClusterId == -1 && endClusterId == -1) {
-            return;
         } else if (beginClusterId != endClusterId && beginClusterId != -1 && endClusterId != -1) {
             uiManager->ManualMergeClusters(beginClusterId, endClusterId, this->Interactor);
         } else if (beginClusterId != -1) {
@@ -68,8 +67,23 @@ void customInteractorStyle::OnRightButtonUp() {
             uiManager->HighlightFace(endClusterId, this->Interactor);
         }
     } else if (isDivideButtonDown) {
-        uiManager->clusterDivision();
+        if (divMap) {
+            delete divMap;
+        }
+        if (S) {
+            delete S;
+        }
+        divMap = uiManager->clusterDivision(this->Interactor, clusterNumA, clusterNumB, S);
     }
+}
+
+void customInteractorStyle::OnMiddleButtonDown() {
+    if (isDivideButtonDown) {
+        uiManager->HighlightDivision(divMap, clusterNumA, clusterNumB, S, this->Interactor);
+        uiManager->ClearLine();
+    }
+
+    vtkInteractorStyleTrackballCamera::OnMiddleButtonDown();
 }
 
 void customInteractorStyle::OnMouseMove() {
@@ -77,7 +91,7 @@ void customInteractorStyle::OnMouseMove() {
         int *pos = this->GetInteractor()->GetEventPosition();
 
         vtkSmartPointer<vtkCellPicker> picker = vtkSmartPointer<vtkCellPicker>::New();
-        picker->SetTolerance(0.00001);
+        picker->SetTolerance(0.00000);
         picker->Pick(pos[0], pos[1], 0, this->GetDefaultRenderer());
 
         if (isMergeButtonDown) {

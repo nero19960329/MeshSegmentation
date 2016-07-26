@@ -25,7 +25,7 @@ UserInteractionManager* QVTKModelViewer::RenderModel(string inputFileName) {
     reader->Update();
 
     vtkSmartPointer<vtkPolyData> mesh = reader->GetOutput();
-    vtkIdType numberOfFaces = mesh->GetNumberOfCells();
+    int numberOfFaces = mesh->GetNumberOfCells();
 
     vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
     mapper->SetInputConnection(reader->GetOutputPort());

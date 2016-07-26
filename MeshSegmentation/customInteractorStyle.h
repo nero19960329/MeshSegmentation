@@ -3,6 +3,10 @@
 #include <vtkInteractorStyleTrackballCamera.h>
 #include <vtkObjectFactory.h>
 
+#include <unordered_map>
+
+#include "DisjointSet.h"
+#include "List.h"
 #include "UserInteractionManager.h"
 
 class customInteractorStyle : public vtkInteractorStyleTrackballCamera {
@@ -17,6 +21,10 @@ private:
     int lastClusterId;
     int beginClusterId, endClusterId;
 
+    std::unordered_map< int, List<int>* > *divMap;
+    int clusterNumA, clusterNumB;
+    DisjointSet *S;
+
 public:
     static customInteractorStyle* New();
     customInteractorStyle();
@@ -29,5 +37,6 @@ public:
     virtual void OnLeftButtonUp();
     virtual void OnRightButtonDown();
     virtual void OnRightButtonUp();
+    virtual void OnMiddleButtonDown();
     virtual void OnMouseMove();
 };
