@@ -1,7 +1,6 @@
 #include "vtkConvertToDualGraph.h"
 
 #include <vtkCellData.h>
-#include <vtkCharArray.h>
 #include <vtkDataArray.h>
 #include <vtkDataObject.h>
 #include <vtkDoubleArray.h>
@@ -17,7 +16,7 @@
 #include <vtkUndirectedGraph.h>
 #include <vtkTriangle.h>
 
-#include <list>
+#include "List.h"
 
 using namespace std;
 
@@ -34,7 +33,7 @@ int vtkConvertToDualGraph::RequestData(vtkInformation *vtkNotUsed(request), vtkI
 
     vtkSmartPointer<vtkPoints> points = mesh->GetPoints();
     vtkSmartPointer<vtkDataArray> dataArray = points->GetData();
-    vtkIdType numberOfFaces = mesh->GetNumberOfCells();
+    int numberOfFaces = mesh->GetNumberOfCells();
     vtkSmartPointer<vtkIdList> faceIndex = vtkSmartPointer<vtkIdList>::New();
 
     vtkSmartPointer<vtkDoubleArray> centers = vtkSmartPointer<vtkDoubleArray>::New();
@@ -54,25 +53,23 @@ int vtkConvertToDualGraph::RequestData(vtkInformation *vtkNotUsed(request), vtkI
 
     for (int i = 0; i < numberOfFaces; ++i) {
         mesh->GetCellPoints(i, faceIndex);
-        vtkIdType vertexIndex[3] = { faceIndex->GetId(0), faceIndex->GetId(1), faceIndex->GetId(2) };
+        int vertexIndex[3] = { faceIndex->GetId(0), faceIndex->GetId(1), faceIndex->GetId(2) };
         double p0[3], p1[3], p2[3];
 
         // convert into points
-        for (int j = 0; j < 3; ++j) {
-            p0[j] = dataArray->GetComponent(vertexIndex[0], j);
-            p1[j] = dataArray->GetComponent(vertexIndex[1], j);
-            p2[j] = dataArray->GetComponent(vertexIndex[2], j);
-        }
+        dataArray->GetTuple(vertexIndex[0], p0);
+        dataArray->GetTuple(vertexIndex[1], p1);
+        dataArray->GetTuple(vertexIndex[2], p2);
 
         // get center & area of each cell
         double area = vtkTriangle::TriangleArea(p0, p1, p2);
         areas->InsertValue(i, area);
 
-        double tuple[3];
-        tuple[0] = (p0[0] + p1[0] + p2[0]) / 3;
-        tuple[1] = (p0[1] + p1[1] + p2[1]) / 3;
-        tuple[2] = (p0[2] + p1[2] + p2[2]) / 3;
-        centers->InsertTuple(i, tuple);
+        double center[3];
+        center[0] = (p0[0] + p1[0] + p2[0]) / 3;
+        center[1] = (p0[1] + p1[1] + p2[1]) / 3;
+        center[2] = (p0[2] + p1[2] + p2[2]) / 3;
+        centers->InsertTuple(i, center);
     }
 
     // get normals
@@ -102,18 +99,16 @@ int vtkConvertToDualGraph::RequestData(vtkInformation *vtkNotUsed(request), vtkI
 
     double phyDisAvg = 0.0, angleDisAvg = 0.0;
 
-    for (vtkIdType i = 0; i < numberOfFaces; ++i) {
+    for (int i = 0; i < numberOfFaces; ++i) {
         mesh->GetCellPoints(i, faceIndex);
-        vtkIdType vertexIndex[3] = { faceIndex->GetId(0), faceIndex->GetId(1), faceIndex->GetId(2) };
-        list<vtkIdType> neighbors;
+        int vertexIndex[3] = { faceIndex->GetId(0), faceIndex->GetId(1), faceIndex->GetId(2) };
+        List<vtkIdType> neighbors;
         double p0[3], p1[3], p2[3];
 
         // convert into points
-        for (int j = 0; j < 3; ++j) {
-            p0[j] = dataArray->GetComponent(vertexIndex[0], j);
-            p1[j] = dataArray->GetComponent(vertexIndex[1], j);
-            p2[j] = dataArray->GetComponent(vertexIndex[2], j);
-        }
+        dataArray->GetTuple(vertexIndex[0], p0);
+        dataArray->GetTuple(vertexIndex[1], p1);
+        dataArray->GetTuple(vertexIndex[2], p2);
 
         // get side length of a face
         double lateral[3];
@@ -128,8 +123,8 @@ int vtkConvertToDualGraph::RequestData(vtkInformation *vtkNotUsed(request), vtkI
 
             vtkSmartPointer<vtkIdList> neighborCellIds = vtkSmartPointer<vtkIdList>::New();
             mesh->GetCellNeighbors(i, idList, neighborCellIds);
-            for (vtkIdType k = 0; k < neighborCellIds->GetNumberOfIds(); ++k) {
-                vtkIdType neighborCellId = neighborCellIds->GetId(k);
+            for (int k = 0; k < neighborCellIds->GetNumberOfIds(); ++k) {
+                int neighborCellId = neighborCellIds->GetId(k);
 
                 if (i >= neighborCellId) {
                     continue;
@@ -165,16 +160,17 @@ int vtkConvertToDualGraph::RequestData(vtkInformation *vtkNotUsed(request), vtkI
             }
         }
 
-        for (auto neighbor : neighbors) {
-            g->AddEdge(i, neighbor);
+        for (List<vtkIdType>::iterator it = neighbors.begin(); it != NULL; it = it->next) {
+        //for (auto neighbor : neighbors) {
+            g->AddEdge(i, it->key);
         }
     }
 
     double delta = 0.03;
-    vtkIdType edgeNumber = phyDis->GetNumberOfTuples();
+    int edgeNumber = phyDis->GetNumberOfTuples();
     phyDisAvg /= edgeNumber;
     angleDisAvg /= edgeNumber;
-    for (vtkIdType i = 0; i < edgeNumber; ++i) {
+    for (int i = 0; i < edgeNumber; ++i) {
         double w = delta * phyDis->GetValue(i) / phyDisAvg + (1 - delta) * angleDis->GetValue(i) / angleDisAvg;
         meshDis->InsertNextValue(w);
     }
@@ -182,7 +178,6 @@ int vtkConvertToDualGraph::RequestData(vtkInformation *vtkNotUsed(request), vtkI
     g->GetEdgeData()->AddArray(meshDis);
     g->GetVertexData()->AddArray(centers);
     g->GetEdgeData()->AddArray(edgeDis);
-    /*g->GetVertexData()->AddArray(areas);*/
 
     output->ShallowCopy(g);
 

@@ -1,6 +1,8 @@
 #include "meshsegmentation.h"
 
+#include <QDesktopWidget>
 #include <QFileDialog>
+#include <QScreen>
 
 #include <iostream>
 
@@ -59,11 +61,22 @@ MeshSegmentation::MeshSegmentation(QWidget *parent) : QMainWindow(parent) {
     /* ================================================================================== */
 
     this->setCentralWidget(widget);
-    this->setFixedSize(900, 800);
+
+    int width, height;
+    computeWindowSize(width, height);
+    this->resize(width, height);
 }
 
 MeshSegmentation::~MeshSegmentation() {
 
+}
+
+void MeshSegmentation::computeWindowSize(int& width, int& height) {
+    QDesktopWidget *desktop = QApplication::desktop();
+    QScreen *priScreen = QGuiApplication::primaryScreen();
+    QRect priScreenRect = priScreen->geometry();
+    height = priScreenRect.height() * 0.8;
+    width = priScreenRect.height() * 0.9;
 }
 
 void MeshSegmentation::SetModelFileName() {

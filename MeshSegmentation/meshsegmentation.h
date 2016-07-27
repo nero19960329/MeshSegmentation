@@ -39,6 +39,9 @@ private:
     QSlider *clusterNumSlider;
     UserInteractionManager* uiManager;
 
+private:
+    void computeWindowSize(int& width, int& height);
+
 private slots:
     void SetModelFileName();
     void StartSegmentation();
