@@ -1,13 +1,17 @@
 #pragma once
 
+#include <vtkActor.h>
 #include <vtkInteractorStyleTrackballCamera.h>
 #include <vtkObjectFactory.h>
+#include <vtkPlane.h>
 
 #include <unordered_map>
 
 #include "DisjointSet.h"
 #include "List.h"
 #include "UserInteractionManager.h"
+
+enum DIVISION_STATUS { ONE, TWO, THREE, DIVISION, DONE };
 
 class customInteractorStyle : public vtkInteractorStyleTrackballCamera {
 public:
@@ -16,6 +20,11 @@ public:
     bool isRightButtonDown;
     bool isMergeButtonDown;
     bool isDivideButtonDown;
+
+    DIVISION_STATUS dStatus;
+    double planePoints[3][3];
+    vtkSmartPointer<vtkActor> lastActor;
+    vtkSmartPointer<vtkPlane> cutPlane;
 
 private:
     int lastClusterId;

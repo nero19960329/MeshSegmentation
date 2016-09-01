@@ -88,6 +88,7 @@ void MeshSegmentation::SetModelFileName() {
     if (uiManager) {
         delete uiManager;
     }
+    clusterNumSlider->setDisabled(true);
     uiManager = modelViewer->RenderModel(path.toStdString());
 
     mergeButton->setText(tr("Open Merge Mode"));
@@ -146,6 +147,7 @@ void MeshSegmentation::StartSegmentation() {
     cout << "=============================================" << endl;
 
     clusterNumSlider->setValue(seedCnt);
+    clusterNumSlider->setTickPosition(QSlider::TicksBelow);
     clusterNumSlider->setDisabled(false);
 
     delete[] dur_2;
@@ -169,6 +171,7 @@ void MeshSegmentation::SetMergeMode() {
 
 void MeshSegmentation::SetDivideMode() {
     bool& tmp = modelViewer->style->isDivideButtonDown;
+    modelViewer->style->dStatus = ONE;
 
     if (tmp) {
         divideButton->setText(tr("Open Divide Mode"));

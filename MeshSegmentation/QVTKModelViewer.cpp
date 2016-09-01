@@ -2,9 +2,13 @@
 
 #include <vtkAutoInit.h>
 #include <vtkCommand.h>
-#include <vtkSTLReader.h>
-#include <vtkPolyDataMapper.h>
+#include <vtkCutter.h>
 #include <vtkIdList.h>
+#include <vtkSTLReader.h>
+#include <vtkPlane.h>
+#include <vtkPolyDataMapper.h>
+#include <vtkProperty.h>
+#include <vtkRendererCollection.h>
 
 #include <iostream>
 
@@ -32,11 +36,16 @@ UserInteractionManager* QVTKModelViewer::RenderModel(string inputFileName) {
 
     vtkSmartPointer<vtkActor> actor = vtkSmartPointer<vtkActor>::New();
     actor->SetMapper(mapper);
+    //actor->GetProperty()->SetOpacity(0.8);
 
     renderer = vtkSmartPointer<vtkRenderer>::New();
     renderer->AddActor(actor);
-    renderer->SetBackground(0.3, 0.6, 0.3);
+    renderer->SetBackground(0.1, 0.2, 0.3);
 
+    vtkRenderer *firstRenderer = this->GetRenderWindow()->GetRenderers()->GetFirstRenderer();
+    if (firstRenderer) {
+        this->GetRenderWindow()->RemoveRenderer(firstRenderer);
+    }
     this->GetRenderWindow()->AddRenderer(renderer);
     renderWindowInteractor = this->GetInteractor();
     renderWindowInteractor->SetRenderWindow(this->GetRenderWindow());

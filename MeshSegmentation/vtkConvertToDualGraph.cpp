@@ -18,8 +18,6 @@
 
 #include "List.h"
 
-using namespace std;
-
 vtkStandardNewMacro(vtkConvertToDualGraph);
 
 int vtkConvertToDualGraph::RequestData(vtkInformation *vtkNotUsed(request), vtkInformationVector **inputVector, vtkInformationVector *outputVector) {
