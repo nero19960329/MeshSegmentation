@@ -85,26 +85,27 @@ public:
         s = 0.9;
         v = 0.8;
 
-        clusterColors = new unsigned char*[clusterCnt];
+        clusterColors = new unsigned char*[clusterCnt + 1];
         for (int i = 0; i < clusterCnt; ++i) {
-            unsigned char* clusterColor = HSVtoRGB(h, s, v);
+            unsigned char *clusterColor = HSVtoRGB(h, s, v);
             clusterColors[i] = clusterColor;
             h += goldenRatio;
             h -= floor(h);
         }
+        unsigned char white[4] = { 255, 255, 255, 255 };
+        clusterColors[clusterCnt] = white;
 
-        for (int i = 0; i < clusterCnt; ++i) {
+        for (int i = 0; i <= clusterCnt; ++i) {
             colorHashMap[i] = i;
         }
 
-        clusterStatuses = new int[clusterCnt];
-        for (int i = 0; i < clusterCnt; ++i) {
+        clusterStatuses = new int[clusterCnt + 1];
+        for (int i = 0; i <= clusterCnt; ++i) {
             clusterStatuses[i] = STATUS_NONE;
         }
 
         clusterSteps = NULL;
 
-        unsigned char white[4] = { 255, 255, 255, 255 };
         faceColors = vtkSmartPointer<vtkUnsignedCharArray>::New();
         faceColors->SetNumberOfComponents(4);
         faceColors->SetNumberOfTuples(numberOfFaces);
@@ -119,8 +120,8 @@ public:
             faceIdToClusterMap[i] = -1;
         }
 
-        clusterFaceIds = new vtkSmartPointer<vtkIdTypeArray>[clusterCnt];
-        for (int i = 0; i < clusterCnt; ++i) {
+        clusterFaceIds = new vtkSmartPointer<vtkIdTypeArray>[clusterCnt + 1];
+        for (int i = 0; i <= clusterCnt; ++i) {
             vtkSmartPointer<vtkIdTypeArray> clusterFaceId = vtkSmartPointer<vtkIdTypeArray>::New();
             clusterFaceId->SetNumberOfComponents(1);
             clusterFaceIds[i] = clusterFaceId;
@@ -317,13 +318,21 @@ public:
         end = clock();
         dur[4] = (end - begin) * 1.0 / CLOCKS_PER_SEC;
 
+        //cout << "Deleting . . ." << endl;
+        //cout << "1 . . ." << endl;
         delete[] clusterCenterIds;
+        //cout << "2 . . ." << endl;
         delete[] minDisIds;
+        //cout << "3 . . ." << endl;
         for (int i = 0; i < clusterCnt; ++i) {
-            delete[] distances[i];
+            if (distances[i]) {
+                delete[] distances[i];
+            }
         }
+       // cout << "4 . . ." << endl;
         delete[] distances;
 
+        //cout << "Delete ok!" << endl;
         return dur;
     }
 
@@ -520,15 +529,6 @@ public:
         delete[] sumValues;
     }
 
-    void Selecting(const vtkSmartPointer<vtkCellPicker>& picker, const vtkSmartPointer<vtkRenderWindowInteractor>& interactor) {
-        unsigned char selectedColor[4] = { 0, 0, 0, 255 };
-
-        int pickId = picker->GetCellId();
-        if (pickId != -1) {
-
-        }
-    }
-
     unordered_map< int, List<int>* >* clusterDivision(const vtkSmartPointer<vtkRenderWindowInteractor>& interactor, const vtkSmartPointer<vtkPlane>& cutPlane, int pickId, DisjointSet* &S) {
         double origin[3], normal[3];
         cutPlane->GetOrigin(origin);
@@ -536,6 +536,9 @@ public:
 
         int targetCluster = faceIdToClusterMap[pickId];
         vtkSmartPointer<vtkIdTypeArray>& targetArray = clusterFaceIds[targetCluster];
+        if (S) {
+            delete S;
+        }
         S = new DisjointSet(numberOfFaces);
         for (int i = 0; i < targetArray->GetNumberOfTuples(); ++i) {
             S->MakeSet(targetArray->GetValue(i));
@@ -608,51 +611,41 @@ public:
     void HighlightDivision(const vtkSmartPointer<vtkRenderWindowInteractor>& interactor, unordered_map< int, List<int>* > *divMap, int pickId, DisjointSet *S, vtkSmartPointer<vtkActor> lastActor) {
         int targetCluster = faceIdToClusterMap[pickId];
         int targetSet = S->FindSet(pickId);
+
         List<int> *setIds = (*divMap)[targetSet];
-        vtkSmartPointer<vtkIdTypeArray> setFaceIds = vtkSmartPointer<vtkIdTypeArray>::New();
-        setFaceIds->SetNumberOfComponents(1);
+        clusterFaceIds[clusterCnt] = vtkSmartPointer<vtkIdTypeArray>::New();
+        clusterFaceIds[clusterCnt]->SetNumberOfComponents(1);
+
+        bool *localMap = new bool[numberOfFaces];
+        memset(localMap, 0, numberOfFaces * sizeof(bool));
         for (List<int>::iterator it = setIds->begin(); it != NULL; it = it->next) {
-            setFaceIds->InsertNextValue(it->key);
+            localMap[it->key] = true;
+            clusterFaceIds[clusterCnt]->InsertNextValue(it->key);
+            faceIdToClusterMap[it->key] = clusterCnt;
+        }
+        clusterStatuses[clusterCnt] = STATUS_ACTIVE;
+
+        vtkSmartPointer<vtkIdTypeArray> tmpFaceIds = vtkSmartPointer<vtkIdTypeArray>::New();
+        tmpFaceIds->SetNumberOfComponents(1);
+        for (int i = 0; i < clusterFaceIds[targetCluster]->GetNumberOfTuples(); ++i) {
+            int faceId = clusterFaceIds[targetCluster]->GetValue(i);
+            if (!localMap[faceId]) {
+                tmpFaceIds->InsertNextValue(faceId);
+            }
         }
 
-        unsigned char white[4] = { 255, 255, 255, 255 };
-        highlightFace(interactor, setFaceIds, white);
+        clusterFaceIds[targetCluster] = vtkSmartPointer<vtkIdTypeArray>::New();
+        clusterFaceIds[targetCluster]->DeepCopy(tmpFaceIds);
 
         vtkRenderer *renderer = interactor->GetRenderWindow()->GetRenderers()->GetFirstRenderer();
         if (lastActor) {
             renderer->RemoveActor(lastActor);
         }
-        /*vtkSmartPointer<vtkIdTypeArray>& targetCluster = clusterFaceIds[clusterNumA];
-        int minSetId = S->FindSet(targetCluster->GetValue(0));
-        for (auto setId : (*divMap)) {
-            if ((*divMap)[minSetId]->Size() > setId.second->Size()) {
-                minSetId = setId.first;
-            }
-        }
 
-        bool *localMap = new bool[numberOfFaces];
-        memset(localMap, 0, numberOfFaces * sizeof(bool));
-        for (List<int>::iterator it = (*divMap)[minSetId]->begin(); it != NULL; it = it->next) {
-            localMap[it->key] = true;
-            clusterFaceIds[clusterNumB]->InsertNextValue(it->key);
-        }
+        unsigned char gray[4] = { 212, 212, 212, 255 };
+        highlightFace(interactor, clusterFaceIds[clusterCnt], gray);
 
-        vtkSmartPointer<vtkIdTypeArray> tmpFaceIds = vtkSmartPointer<vtkIdTypeArray>::New();
-        tmpFaceIds->SetNumberOfComponents(1);
-        for (int i = 0; i < clusterFaceIds[clusterNumA]->GetNumberOfTuples(); ++i) {
-            int faceId = clusterFaceIds[clusterNumA]->GetValue(i);
-            if (!localMap[faceId]) {
-                tmpFaceIds->InsertNextValue(faceId);
-            }
-        } 
-
-        clusterFaceIds[clusterNumA] = vtkSmartPointer<vtkIdTypeArray>::New();
-        clusterFaceIds[clusterNumA]->DeepCopy(tmpFaceIds);
-
-        highlightFace(interactor, clusterFaceIds[clusterNumA], clusterColors[colorHashMap[clusterNumA]]);
-        highlightFace(interactor, clusterFaceIds[clusterNumB], clusterColors[colorHashMap[clusterNumB]]);
-
-        delete[] localMap;*/
+        delete[] localMap;
     }
 
     int HighlightCluster(const vtkSmartPointer<vtkCellPicker>& picker, const vtkSmartPointer<vtkRenderWindowInteractor>& interactor, int lastClusterId, int beginClusterId) {
@@ -678,7 +671,14 @@ public:
 
             unsigned char color[4] = { 255, 255, 255, 255 };
             faceColors->GetTupleValue(pickId, color);
-            unsigned char highlightColor[4] = { (unsigned char) color[0] * 1.2, (unsigned char) color[1] * 1.2, (unsigned char) color[2] * 1.2, 255 };
+            int _r, _g, _b;
+            _r = color[0] * 1.2;
+            _g = color[1] * 1.2;
+            _b = color[2] * 1.2;
+            _r = _r > 255 ? 255 : _r;
+            _g = _g > 255 ? 255 : _g;
+            _b = _b > 255 ? 255 : _b;
+            unsigned char highlightColor[4] = { (unsigned char) _r, (unsigned char) _g, (unsigned char) _b, 255 };
             highlightFace(interactor, clusterFaceIds[clusterId], highlightColor);
 
             return clusterId;

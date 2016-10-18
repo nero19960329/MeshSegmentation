@@ -89,7 +89,7 @@ void MeshSegmentation::SetModelFileName() {
         delete uiManager;
     }
     clusterNumSlider->setDisabled(true);
-    uiManager = modelViewer->RenderModel(path.toStdString());
+    uiManager = modelViewer->RenderModel(string((const char *) path.toLocal8Bit()));
 
     mergeButton->setText(tr("Open Merge Mode"));
     divideButton->setText(tr("Open Divide Mode"));

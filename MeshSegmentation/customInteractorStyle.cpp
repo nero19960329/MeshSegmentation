@@ -67,6 +67,7 @@ void customInteractorStyle::OnRightButtonDown() {
             if (pickId != -1) {
                 divMap = uiManager->clusterDivision(this->Interactor, cutPlane, pickId, S);
                 uiManager->HighlightDivision(this->Interactor, divMap, pickId, S, lastActor);
+                lastActor = NULL;
 
                 dStatus = DONE;
             }
@@ -94,6 +95,8 @@ void customInteractorStyle::OnRightButtonUp() {
         } else {
             uiManager->HighlightFace(endClusterId, this->Interactor);
         }
+
+        lastClusterId = -1;
     }
 }
 
